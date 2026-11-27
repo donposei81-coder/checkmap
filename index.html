@@ -1351,6 +1351,9 @@ async function geoSearch(text, limit, signal){
     const hit = (w, k) => have.includes(w) || (k === typed.length - 1 && w.length > 1 && have.some(h => h.startsWith(w)));
     const cov = typed.length ? typed.filter(hit).length / typed.length : 0;
     i.score += cov === 1 ? 0.3 : 0.1 * cov;
+    // Recherche de plusieurs mots : le nom le plus exact passe devant (« Mairie de Bordeaux » avant « Mairie de Bordeaux-en-Gâtinais »)
+    const name = words(i.main);
+    if (typed.length > 1 && name.length) i.score += 0.15 * name.filter(w => typed.includes(w)).length / name.length;
     if (S.center) i.score += 0.12 * cov * Math.exp(-kmBetween(S.center, i.c) / 40);
   }
   items.sort((x, y) => y.score - x.score);
