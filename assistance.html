@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#14afd0">
+<title>Assistance – CheckMap</title>
+<meta name="description" content="Aide et contact pour l'application CheckMap.">
+<style>
+:root{--ink:#1b2a3a;--mute:#5a6b7d;--bg:#f7f9fb;--card:#fff;--line:#dbe3ea;--cyan:#12b3c4;--mag:#ff3d8b;--sun:#ffb020;--leaf:#2bb673}
+@media (prefers-color-scheme:dark){:root{--ink:#e9f1f5;--mute:#a3b4c2;--bg:#0f1c26;--card:#152633;--line:#25404f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header{background:linear-gradient(120deg,#12b3c4 0%,#14afd0 40%,#ff3d8b 100%);color:#fff;padding:40px 20px 56px}
+header .in,main{max-width:760px;margin:0 auto}
+header a{color:#fff;text-decoration:none;font-weight:700;opacity:.9}
+header h1{margin:18px 0 6px;font-size:32px;line-height:1.2}
+header p{margin:0;opacity:.95}
+main{padding:0 16px 48px;margin-top:-32px}
+section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin:0 0 16px;box-shadow:0 6px 20px rgba(18,40,60,.06)}
+section h2{margin:0 0 8px;font-size:20px;display:flex;align-items:center;gap:10px}
+section h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--dot,var(--cyan));flex:none}
+section:nth-of-type(4n+2){--dot:var(--mag)}section:nth-of-type(4n+3){--dot:var(--sun)}section:nth-of-type(4n+4){--dot:var(--leaf)}
+a{color:var(--cyan)}
+ul{padding-left:20px;margin:8px 0}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600}
+.todo{background:#fff3c4;color:#6b4c00;padding:0 4px;border-radius:4px}
+details{border-top:1px solid var(--line);padding:10px 0}details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600}
+.btn{display:inline-block;background:var(--mag);color:#fff;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:999px}
+footer{text-align:center;color:var(--mute);font-size:14px;padding:8px 16px 32px}
+</style>
+</head>
+<body>
+<header><div class="in">
+<a href="./">← CheckMap</a>
+<h1>Assistance</h1>
+<p>Une question, un bug, une idée ? On vous répond.</p>
+</div></header>
+<main>
+<section>
+<h2>Nous écrire</h2>
+<p>Par e-mail : <a href="mailto:donposei81@gmail.com">donposei81@gmail.com</a>. Indiquez si possible le modèle de votre téléphone et l'adresse analysée.</p>
+<p><a class="btn" href="https://github.com/donposei81-coder/checkmap/issues">Signaler un problème sur GitHub</a></p>
+</section>
+<section>
+<h2>Questions fréquentes</h2>
+<details><summary>Comment est calculé le score sur 100 ?</summary>
+<p>Chaque catégorie cochée a un poids (transports et supermarchés comptent plus que les toilettes publiques, par exemple). Sa note combine la distance au lieu le plus proche (55 %) et le nombre de lieux dans le rayon (45 %). Le score est la moyenne pondérée des catégories cochées : décochez ce qui ne vous concerne pas pour un score à votre image.</p></details>
+<details><summary>Le temps de marche est-il exact ?</summary>
+<p>Les zones à 5, 10 et 15 minutes suivent le réseau piéton réel. Le temps vers chaque lieu est une estimation à 5 km/h qui tient compte des détours.</p></details>
+<details><summary>Il manque un commerce ou un lieu est faux</summary>
+<p>Les lieux viennent d'OpenStreetMap, la carte collaborative. Vous pouvez corriger ou ajouter un lieu sur openstreetmap.org : la correction apparaîtra dans CheckMap après mise à jour des serveurs.</p></details>
+<details><summary>Les résultats ne se chargent pas</summary>
+<p>CheckMap interroge des serveurs publics gratuits, parfois chargés. Patientez quelques secondes ou réessayez : l'appli bascule automatiquement sur un autre serveur. Une connexion internet est nécessaire pour analyser une nouvelle adresse ; vos favoris restent consultables hors ligne.</p></details>
+<details><summary>Je ne veux pas partager ma position</summary>
+<p>Pas de problème : cherchez une adresse ou touchez la carte. Pour changer l'autorisation sur iPhone : Réglages › Confidentialité et sécurité › Service de localisation › CheckMap.</p></details>
+<details><summary>Comment ajouter le widget « Mon quartier » ?</summary>
+<p>Analysez une adresse, puis appuyez longuement sur l'écran d'accueil, touchez « Modifier » › « Ajouter un widget », cherchez CheckMap et choisissez la taille.</p></details>
+<details><summary>Quels raccourcis Siri sont disponibles ?</summary>
+<p>« Score de mon quartier avec CheckMap », « Analyse ce quartier avec CheckMap » et « Analyse une adresse avec CheckMap ». Ils apparaissent aussi dans l'app Raccourcis.</p></details>
+<details><summary>Comment supprimer mes données ?</summary>
+<p>Tout est stocké sur votre appareil : supprimez un favori ou une photo dans l'appli, ou supprimez l'appli pour tout effacer. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</p></details>
+<details><summary>Quelles zones sont couvertes ?</summary>
+<p>Les commerces, services et temps de marche fonctionnent partout où OpenStreetMap est renseigné. Les risques (Géorisques), les prix de vente (DVF) et la fréquence des transports concernent la France ; DVF ne couvre pas l'Alsace, la Moselle et Mayotte.</p></details>
+</section>
+</main>
+<footer><a href="confidentialite.html">Confidentialité</a> · <a href="./">Ouvrir CheckMap</a></footer>
+</body>
+</html>
