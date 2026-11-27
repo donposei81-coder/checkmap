@@ -115,6 +115,25 @@ button{cursor:pointer}
 .credits{font-size:13px;color:var(--mute);margin-top:16px;line-height:1.4}
 .credits a{color:inherit}
 
+/* Univers en couleurs (tous les thèmes) */
+.uni{margin-top:14px;border-radius:16px;padding:0 12px 4px;background:color-mix(in srgb,var(--u1) 7%,var(--panel));border:1px solid color-mix(in srgb,var(--u1) 24%,transparent);overflow:hidden}
+.uni h2{margin:0 -12px 2px;padding:9px 12px;background:linear-gradient(100deg,var(--u1),var(--u2));color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.uni h2 input{accent-color:#fff}
+.uni h2 .uico{flex:none}
+.uni .cat:first-of-type{border-top:0}
+.uni .cat{border-top-color:color-mix(in srgb,var(--u1) 16%,var(--line))}
+.cat .bar{height:5px;border-radius:3px;background:color-mix(in srgb,var(--c) 15%,transparent)}
+.cat .bar i{border-radius:3px;background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 45%,#fff))}
+.cat input{accent-color:var(--c)}
+.cl{position:relative;background:none!important;border:0!important;box-shadow:none!important;padding:0}
+.cl i{position:absolute;inset:0;border-radius:50%;box-shadow:0 3px 8px rgba(20,40,70,.35)}
+.cl span{position:absolute;inset:4px;border-radius:50%;display:grid;place-items:center;background:#13242e;color:#fff;font:800 13px/1 Overpass,system-ui,sans-serif}
+.pop{border-top:4px solid var(--c,#14afd0);margin-top:-4px;padding-top:6px}
+.pop .pt{color:color-mix(in srgb,var(--c,#56666d) 75%,#000)}
+.legal{display:flex;gap:16px;margin:6px 0 0;font-size:13px}
+.legal a{color:var(--mag-ink);font-weight:700}
+.ring .trk{stroke:var(--line)}
+
 /* Repères en croix */
 .xm svg{display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
 .cl{display:grid;place-items:center;border-radius:50%;background:#13242e;color:#fff;font:800 13px/1 Overpass,system-ui,sans-serif;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
@@ -322,6 +341,51 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
 .ringpin i+i{border-color:#14afd0;animation-delay:1.2s}
 @keyframes ring{0%{transform:scale(.3);opacity:.9}100%{transform:scale(1.3);opacity:0}}
 
+
+/* Lagon : couleurs de vie */
+body.lagon #panel{background:linear-gradient(180deg,#d9f7fb 0,#fdf3f8 120px,#f7f9fb 260px)}
+body.lagon .scorebox{background:linear-gradient(135deg,#fff0dc 0%,#ffe4f0 50%,#dff4ff 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.7)}
+body.lagon .ring .trk{stroke:rgba(255,255,255,.95)}
+body.lagon .ring .v span{background:linear-gradient(135deg,#ff3d8b,#7a5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.lagon .mini{background:linear-gradient(135deg,#ff3d8b,#7a5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.lagon .scorebox[data-lv=top] b{color:#0d9a52}body.lagon .scorebox[data-lv=bon] b{color:#0a8fb0}body.lagon .scorebox[data-lv=ok] b{color:#c46a00}body.lagon .scorebox[data-lv=moy] b{color:#e0266f}body.lagon .scorebox[data-lv=bas] b{color:#b3121f}
+body.lagon .seg button{border-color:#d3e8ef}
+body.lagon .seg button:hover{border-color:#14afd0}
+body.lagon .chip{--k:#14afd0;border-color:color-mix(in srgb,var(--k) 45%,#fff);background:#fff}
+body.lagon .chip:hover{background:color-mix(in srgb,var(--k) 8%,#fff)}
+body.lagon .chip[aria-pressed=true]{background:linear-gradient(135deg,var(--k),color-mix(in srgb,var(--k) 60%,#fff));border-color:transparent;color:#fff;box-shadow:0 4px 12px color-mix(in srgb,var(--k) 35%,transparent)}
+body.lagon .chip[data-pack=famille]{--k:#12b05a}body.lagon .chip[data-pack=sansvoiture]{--k:#2f62ff}body.lagon .chip[data-pack=senior]{--k:#ff2f7e}body.lagon .chip[data-pack=etudiant]{--k:#ff7a00}body.lagon .chip[data-pack=electrique]{--k:#00a6e8}body.lagon .chip[data-pack=sportif]{--k:#8b5cf6}
+body.lagon .chip[data-pack=all][aria-pressed=true]{background:linear-gradient(100deg,#ff7a00,#ff2f7e,#8b5cf6,#2f62ff,#12b05a)}
+body.lagon .chip[data-kind=travail]{--k:#2f62ff}body.lagon .chip[data-kind=ecole]{--k:#ff7a00}body.lagon .chip[data-kind=famille]{--k:#ff2f7e}body.lagon .chip[data-kind=sport]{--k:#10b39c}body.lagon .chip[data-kind=autre]{--k:#8b5cf6}
+body.lagon .card{position:relative;overflow:hidden;border:0;background:#fff;box-shadow:0 6px 20px rgba(27,60,90,.09)}
+body.lagon .card::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,var(--k1,#14afd0),var(--k2,#ff3d8b))}
+body.lagon .card h3::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px;background:linear-gradient(135deg,var(--k1,#14afd0),var(--k2,#ff3d8b))}
+body.lagon .uni{background:color-mix(in srgb,var(--u1) 6%,#fff);box-shadow:0 6px 18px color-mix(in srgb,var(--u1) 14%,transparent)}
+body.lagon .btn{border-color:#cfe3ea;background:#fff}
+body.lagon #favBtn{border-color:#ffc94d;color:#9a5b00}
+body.lagon #favBtn[aria-pressed=true]{background:linear-gradient(135deg,#ffd34d,#ffb300);border-color:transparent;color:#5a3500}
+body.lagon #shareBtn{border-color:#7fdcec;color:#08799a}
+body.lagon #pinBtn{border-color:#c3b2ff;color:#5b3fd6}
+body.lagon .btn.dark{background:linear-gradient(120deg,#ff3d8b,#ff7a59 60%,#ffb300);box-shadow:0 6px 16px rgba(255,61,139,.3)}
+body.lagon #fab{background:linear-gradient(120deg,#ff3d8b,#ff7a59,#ffb300,#ff3d8b);background-size:300% 100%;animation:flow 6s linear infinite;box-shadow:0 10px 26px rgba(255,61,139,.45)}
+body.lagon #fab svg{animation:bob 2.6s ease-in-out infinite}
+@keyframes flow{to{background-position:300% 0}}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-2px) rotate(-6deg)}}
+body.lagon .sheet header,body.lagon #chat header{background:linear-gradient(100deg,#14afd0,#2f62ff 60%,#8b5cf6)}
+body.lagon .m.b{background:linear-gradient(135deg,#e8f9fd,#f1ecff)}
+body.lagon .m .tags span{background:#fff;border-color:#ffc2da;color:#c2185b}
+body.lagon .sugs button:nth-child(4n+1){border-color:#ffc58a;color:#b45900}body.lagon .sugs button:nth-child(4n+2){border-color:#ffb3cf;color:#c2185b}body.lagon .sugs button:nth-child(4n+3){border-color:#a8e3b9;color:#0b7a3e}body.lagon .sugs button:nth-child(4n+4){border-color:#b0c4ff;color:#2446c9}
+body.lagon .tabs button[aria-selected=true]{background:linear-gradient(135deg,#1fc9b5,#14afd0);border-color:transparent;color:#fff}
+body.lagon .sb{background:linear-gradient(135deg,#ffe4f0,#dff4ff)}
+body.lagon .status,body.lagon .toast{background:linear-gradient(100deg,#1b2a3a,#3b2f7a);color:#fff}
+body.lagon .progress::after{background:linear-gradient(90deg,#14afd0,#ff3d8b,#ffb300)}
+body.lagon .cl span{background:#fff;color:#1b2a3a}
+body.lagon .leaflet-bar{border:0!important;border-radius:12px;overflow:hidden;box-shadow:0 6px 16px rgba(27,60,90,.2)}
+body.lagon .leaflet-bar a{color:#0b8fae}
+body.lagon .leaflet-popup-content-wrapper{border-radius:14px;overflow:hidden}
+body.neon .cl span{background:#160a30;color:#2ee6ff;box-shadow:0 0 10px rgba(46,230,255,.6)}
+body.sun .cl span{background:#00a8c6}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* Mobile : feuille du bas */
@@ -357,7 +421,7 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
   <div class="progress" id="progress"></div>
   <button class="grab" id="grab" aria-label="Agrandir ou réduire le panneau"><span></span></button>
   <header class="brand">
-    <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#13242e"/><circle cx="32" cy="32" r="19" fill="none" stroke="#bfe3ee" stroke-width="3" stroke-dasharray="5 5"/><path d="M23 23l18 18M41 23L23 41" stroke="#d6127e" stroke-width="7" stroke-linecap="round"/></svg>
+    <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="glogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14afd0"/><stop offset="1" stop-color="#2f62ff"/></linearGradient><linearGradient id="gx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb300"/><stop offset="1" stop-color="#ff3d8b"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#glogo)"/><circle cx="32" cy="32" r="19" fill="none" stroke="#c9f6ff" stroke-width="3" stroke-dasharray="5 5"/><path d="M23 23l18 18M41 23L23 41" stroke="#fff" stroke-width="10" stroke-linecap="round"/><path d="M23 23l18 18M41 23L23 41" stroke="url(#gx)" stroke-width="6" stroke-linecap="round"/></svg>
     <div><h1>CheckMap</h1><div class="tag">Le score de votre futur quartier</div></div>
     <div class="mini" id="mini" aria-hidden="true">–<small>/100</small></div>
     <button type="button" class="ibtn libb" id="libBtn" title="Mes adresses" aria-label="Mes adresses : favoris et historique">
@@ -381,7 +445,7 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
 
     <div class="scorebox" id="scoreBox" aria-live="polite">
       <div class="ring">
-        <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true"><circle cx="46" cy="46" r="40" fill="none" stroke="var(--line)" stroke-width="9"/> <defs><linearGradient id="gsun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ff2d7a"/></linearGradient><linearGradient id="glagon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3d8b"/><stop offset="1" stop-color="#14afd0"/></linearGradient></defs><circle id="arc" cx="46" cy="46" r="40" fill="none" stroke="#d6127e" stroke-width="9" stroke-linecap="round" stroke-dasharray="251.33" stroke-dashoffset="251.33"/></svg>
+        <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true"><circle class="trk" cx="46" cy="46" r="40" fill="none" stroke-width="9"/> <defs><linearGradient id="gsun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ff2d7a"/></linearGradient><linearGradient id="glagon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb300"/><stop offset=".35" stop-color="#ff3d8b"/><stop offset=".7" stop-color="#8b5cf6"/><stop offset="1" stop-color="#14afd0"/></linearGradient></defs><circle id="arc" cx="46" cy="46" r="40" fill="none" stroke="#d6127e" stroke-width="9" stroke-linecap="round" stroke-dasharray="251.33" stroke-dashoffset="251.33"/></svg>
         <div class="v"><div><span id="scoreV">–</span><small>/100</small></div></div>
       </div>
       <div><b id="scoreL">Analyse en attente</b><p id="scoreP">Choisissez un point pour obtenir le score du quartier.</p></div>
@@ -389,7 +453,7 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
 
     <div id="q15" hidden></div>
 
-    <section class="card">
+    <section class="card" style="--k1:#8b5cf6;--k2:#2f62ff">
       <div class="card-h"><h2>Mes lieux importants</h2><button type="button" class="link" id="addPlaceBtn">+ Ajouter</button></div>
       <form id="placeForm" class="pform" hidden autocomplete="off">
         <div class="chips" id="placeKinds"></div>
@@ -400,7 +464,7 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
       <div id="trips"></div>
     </section>
 
-    <section class="card">
+    <section class="card" style="--k1:#ff7a00;--k2:#ff3d8b">
       <div class="card-h"><h2>Risques, prix et transports</h2></div>
       <div id="fiche"><p class="hint">Choisissez une adresse.</p></div>
     </section>
@@ -418,6 +482,7 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
       <button class="btn" id="pinBtn" type="button">Comparer…</button>
     </div>
     <p class="credits">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL), extraits Geofabrik mis à jour chaque semaine et API Overpass. Géocodage Photon et Nominatim. Distances à vol d'oiseau, temps de marche estimés avec 30 % de détour.</p>
+    <p class="legal"><a href="confidentialite.html">Confidentialité</a><a href="assistance.html">Assistance</a></p>
   </div>
 </aside>
 
@@ -473,29 +538,31 @@ const radiusFromMin = m => clampR(m * WALK_MPM / DETOUR);
 function clampR(r){ return Math.min(MAX_R, Math.max(200, Math.round(r / 50) * 50)); }
 const fmtDist = d => d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(1).replace('.', ',') + ' km';
 
+// c1, c2 : dégradé de l'univers (en-têtes, cartes, couronnes des regroupements de repères)
 const UNIVERS = [
-  { id:'alim',  name:'Alimentation & Commerces' },
-  { id:'sante', name:'Santé & Bien-être' },
-  { id:'vie',   name:'Vie quotidienne & Famille' },
-  { id:'mob',   name:'Mobilité & Pratique' }
+  { id:'alim',  name:'Alimentation & Commerces',  c1:'#ff7a00', c2:'#ffb300', ico:'<path d="M4 9h16l-1.6 10.2a1.5 1.5 0 0 1-1.5 1.3H7.1a1.5 1.5 0 0 1-1.5-1.3z"/><path d="M8.5 9 12 3.5 15.5 9"/>' },
+  { id:'sante', name:'Santé & Bien-être',         c1:'#ff2f7e', c2:'#c04cf0', ico:'<path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/>' },
+  { id:'vie',   name:'Vie quotidienne & Famille', c1:'#12b05a', c2:'#8fcc14', ico:'<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>' },
+  { id:'mob',   name:'Mobilité & Pratique',       c1:'#2f62ff', c2:'#00b2ff', ico:'<rect x="5" y="3.5" width="14" height="14" rx="3"/><path d="M5 11h14M8.5 21l1-3.5M15.5 21l-1-3.5"/><circle cx="9" cy="14.3" r=".6"/><circle cx="15" cy="14.3" r=".6"/>' }
 ];
+const UNI = Object.fromEntries(UNIVERS.map(u => [u.id, u]));
 // w = poids dans le score, ideal = distance (m) sous laquelle la proximité est parfaite, target = nombre de lieux pour un choix complet
 const CATS = [
-  { id:'boulangerie', u:'alim',  name:'Boulangeries',              one:'boulangerie',        color:'#d98a1c', w:2,   ideal:300, target:6 },
-  { id:'supermarche', u:'alim',  name:'Supermarchés',              one:'supermarché',        color:'#e0531f', w:3,   ideal:400, target:5 },
-  { id:'restaurant',  u:'alim',  name:'Restaurants & Cafés',       one:'restaurant ou café', color:'#a8332a', w:1.5, ideal:300, target:30 },
-  { id:'marche',      u:'alim',  name:'Marchés & Primeurs',        one:'marché ou primeur',  color:'#8a6d12', w:1,   ideal:500, target:5 },
-  { id:'medecin',     u:'sante', name:'Médecins',                  one:'médecin',            color:'#d6127e', w:2.5, ideal:500, target:8 },
-  { id:'pharmacie',   u:'sante', name:'Pharmacies',                one:'pharmacie',          color:'#14a04c', w:2.5, ideal:400, target:4 },
-  { id:'dentiste',    u:'sante', name:'Dentistes & Kinés',         one:'dentiste ou kiné',   color:'#9b36a3', w:1,   ideal:700, target:5 },
-  { id:'ecole',       u:'vie',   name:'Écoles & Crèches',          one:'école ou crèche',    color:'#2a6fdb', w:2,   ideal:500, target:6 },
-  { id:'parc',        u:'vie',   name:'Parcs & Espaces verts',     one:'parc',               color:'#4d7c2a', w:2,   ideal:300, target:6 },
-  { id:'sport',       u:'vie',   name:'Salles de sport & Piscines',one:'équipement sportif', color:'#0e8f97', w:1,   ideal:700, target:4 },
-  { id:'poste',       u:'vie',   name:'Postes & Banques',          one:'poste ou banque',    color:'#c99a00', w:1,   ideal:500, target:5 },
-  { id:'transport',   u:'mob',   name:'Transports (métro, tram, bus)', one:'arrêt de transport', color:'#1d3a8a', w:3, ideal:250, target:12 },
-  { id:'borne',       u:'mob',   name:'Bornes électriques',        one:'borne de recharge',  color:'#0098cf', w:0.5, ideal:600, target:4 },
-  { id:'velo',        u:'mob',   name:'Stations vélos',            one:'station vélos',      color:'#6b4fd8', w:1,   ideal:300, target:4 },
-  { id:'toilettes',   u:'mob',   name:'Toilettes publiques',       one:'toilettes',          color:'#6f7468', w:0.5, ideal:400, target:3 }
+  { id:'boulangerie', u:'alim',  name:'Boulangeries',              one:'boulangerie',        color:'#ffa000', w:2,   ideal:300, target:6 },
+  { id:'supermarche', u:'alim',  name:'Supermarchés',              one:'supermarché',        color:'#ff6a00', w:3,   ideal:400, target:5 },
+  { id:'restaurant',  u:'alim',  name:'Restaurants & Cafés',       one:'restaurant ou café', color:'#f2412f', w:1.5, ideal:300, target:30 },
+  { id:'marche',      u:'alim',  name:'Marchés & Primeurs',        one:'marché ou primeur',  color:'#e3b100', w:1,   ideal:500, target:5 },
+  { id:'medecin',     u:'sante', name:'Médecins',                  one:'médecin',            color:'#ff2f7e', w:2.5, ideal:500, target:8 },
+  { id:'pharmacie',   u:'sante', name:'Pharmacies',                one:'pharmacie',          color:'#dd33c0', w:2.5, ideal:400, target:4 },
+  { id:'dentiste',    u:'sante', name:'Dentistes & Kinés',         one:'dentiste ou kiné',   color:'#9d4ff0', w:1,   ideal:700, target:5 },
+  { id:'ecole',       u:'vie',   name:'Écoles & Crèches',          one:'école ou crèche',    color:'#86c11a', w:2,   ideal:500, target:6 },
+  { id:'parc',        u:'vie',   name:'Parcs & Espaces verts',     one:'parc',               color:'#1fb34e', w:2,   ideal:300, target:6 },
+  { id:'sport',       u:'vie',   name:'Salles de sport & Piscines',one:'équipement sportif', color:'#10b39c', w:1,   ideal:700, target:4 },
+  { id:'poste',       u:'vie',   name:'Postes & Banques',          one:'poste ou banque',    color:'#0b8a5c', w:1,   ideal:500, target:5 },
+  { id:'transport',   u:'mob',   name:'Transports (métro, tram, bus)', one:'arrêt de transport', color:'#2f62ff', w:3, ideal:250, target:12 },
+  { id:'borne',       u:'mob',   name:'Bornes électriques',        one:'borne de recharge',  color:'#00a6e8', w:0.5, ideal:600, target:4 },
+  { id:'velo',        u:'mob',   name:'Stations vélos',            one:'station vélos',      color:'#6a5cff', w:1,   ideal:300, target:4 },
+  { id:'toilettes',   u:'mob',   name:'Toilettes publiques',       one:'toilettes',          color:'#6b7fa8', w:0.5, ideal:400, target:3 }
 ];
 const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
 const CAT_IDX = Object.fromEntries(CATS.map((c, i) => [c.id, i]));
@@ -1154,7 +1221,12 @@ const aCircle = L.circle([0, 0], { radius: S.r, color: '#13242e', weight: 1.5, d
 applyTheme();
 const layer = (L.markerClusterGroup ? L.markerClusterGroup({
   maxClusterRadius: 44, disableClusteringAtZoom: 17, showCoverageOnHover: false, spiderfyOnMaxZoom: true, chunkedLoading: true,
-  iconCreateFunction: cl => { const n = cl.getChildCount(), z = n < 10 ? 30 : n < 50 ? 36 : 42; return L.divIcon({ html: String(n), className: 'cl', iconSize: [z, z] }); }
+  iconCreateFunction: cl => {
+    const n = cl.getChildCount(), z = n < 10 ? 32 : n < 50 ? 38 : 44, cnt = {};
+    for (const m of cl.getAllChildMarkers()) cnt[m.options.u] = (cnt[m.options.u] || 0) + 1;
+    let a = 0; const stops = UNIVERS.filter(u => cnt[u.id]).map(u => { const b = a + cnt[u.id] / n * 360, st = `${u.c1} ${a}deg ${b}deg`; a = b; return st; });
+    return L.divIcon({ html: `<i style="background:conic-gradient(${stops.join(',') || '#14afd0 0deg 360deg'})"></i><span>${n}</span>`, className: 'cl', iconSize: [z, z] });
+  }
 }) : L.layerGroup()).addTo(map);
 const markerById = new Map();
 
@@ -1384,6 +1456,7 @@ function renderScore(){
   $('#mini').innerHTML = `${s == null ? '–' : s}<small>/100</small>`;
   $('#arc').style.strokeDashoffset = 251.33 * (1 - (s || 0) / 100);
   $('#scoreL').textContent = l;
+  $('#scoreBox').dataset.lv = s == null ? '' : s >= 80 ? 'top' : s >= 65 ? 'bon' : s >= 50 ? 'ok' : s >= 35 ? 'moy' : 'bas';
   const n = S.active.size;
   $('#scoreP').textContent = S.failed ? `${p} Réessayez dans quelques secondes.` : S.pending ? p : `${p} Calculé sur ${n} catégorie${n > 1 ? 's' : ''} dans un rayon de ${fmtDist(S.r)} (≈ ${walkMin(S.r)} min à pied).`;
 }
@@ -1398,7 +1471,7 @@ function renderCats(){
   $('#cats').innerHTML = UNIVERS.map(u => {
     const cs = CATS.filter(c => c.u === u.id);
     const on = cs.filter(c => S.active.has(c.id)).length;
-    return `<section class="uni"><h2><label><input type="checkbox" data-uni="${u.id}" ${on === cs.length ? 'checked' : ''} data-ind="${on > 0 && on < cs.length ? 1 : 0}">${esc(u.name)}</label></h2>` +
+    return `<section class="uni" style="--u1:${u.c1};--u2:${u.c2}"><h2><label><input type="checkbox" data-uni="${u.id}" ${on === cs.length ? 'checked' : ''} data-ind="${on > 0 && on < cs.length ? 1 : 0}"><svg class="uico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${u.ico}</svg>${esc(u.name)}</label></h2>` +
       cs.map(c => {
         const x = per[c.id], act = S.active.has(c.id);
         return `<div class="cat${act ? '' : ' off'}" style="--c:${c.color}">
@@ -1433,7 +1506,7 @@ function popupHtml(p, d){
   const c = CATS[p[2]];
   const type = TYPE_LABEL[p[4]] || c.one;
   const route = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${S.center[0].toFixed(5)}%2C${S.center[1].toFixed(5)}%3B${p[0]}%2C${p[1]}`;
-  return `<div class="pop"><div class="pt">${crossSvg(c, 14)}${esc(c.name)}</div><b>${esc(p[3] || type)}</b>${p[3] ? `<div class="ps">${esc(type)}</div>` : ''}<div class="pd">${fmtDist(d)} · 🚶 ${walkMin(d)} min à pied</div><a href="${route}" target="_blank" rel="noopener">Itinéraire à pied ↗</a></div>`;
+  return `<div class="pop" style="--c:${c.color}"><div class="pt">${crossSvg(c, 14)}${esc(c.name)}</div><b>${esc(p[3] || type)}</b>${p[3] ? `<div class="ps">${esc(type)}</div>` : ''}<div class="pd">${fmtDist(d)} · 🚶 ${walkMin(d)} min à pied</div><a href="${route}" target="_blank" rel="noopener">Itinéraire à pied ↗</a></div>`;
 }
 function renderMarkers(){
   layer.clearLayers(); markerById.clear();
@@ -1441,7 +1514,7 @@ function renderMarkers(){
   for (const c of CATS) {
     if (!S.active.has(c.id)) continue;
     for (const { p, d } of S.stats.per[c.id].list.slice(0, 400)) {
-      const m = L.marker([p[0], p[1]], { icon: ICONS[c.id], title: p[3] || c.one, riseOnHover: true }).bindPopup(() => popupHtml(p, d));
+      const m = L.marker([p[0], p[1]], { icon: ICONS[c.id], title: p[3] || c.one, riseOnHover: true, u: c.u }).bindPopup(() => popupHtml(p, d));
       ms.push(m); markerById.set(p, m);
     }
   }
@@ -1733,11 +1806,11 @@ function saveHistory(){
    Mes lieux importants : temps de trajet (OSRM, estimation à vol d'oiseau en secours)
    ============================================================ */
 const KINDS = {
-  travail: { name: 'Travail', letter: 'T', color: '#0077b6' },
-  ecole:   { name: 'École',   letter: 'É', color: '#2a6fdb' },
-  famille: { name: 'Famille', letter: 'F', color: '#e0245e' },
-  sport:   { name: 'Loisirs', letter: 'L', color: '#0e8f97' },
-  autre:   { name: 'Autre',   letter: '★', color: '#6b4fd8' }
+  travail: { name: 'Travail', letter: 'T', color: '#2f62ff' },
+  ecole:   { name: 'École',   letter: 'É', color: '#ff7a00' },
+  famille: { name: 'Famille', letter: 'F', color: '#ff2f7e' },
+  sport:   { name: 'Loisirs', letter: 'L', color: '#10b39c' },
+  autre:   { name: 'Autre',   letter: '★', color: '#8b5cf6' }
 };
 const MODES = [
   { id: 'foot', name: 'À pied', osrm: 'routed-foot', est: d => d * 1.3 / WALK_MPM },
@@ -2148,7 +2221,7 @@ async function drawBilan(){
   // anneau du score
   const cx = 190, cy = 500, R = 120;
   x.lineWidth = 26; x.strokeStyle = '#f0dfc4'; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.stroke();
-  const rg = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, '#ff7a1a'); rg.addColorStop(1, '#ff2d7a');
+  const rg = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, '#ffb300'); rg.addColorStop(.35, '#ff3d8b'); rg.addColorStop(.7, '#8b5cf6'); rg.addColorStop(1, '#14afd0');
   x.strokeStyle = rg; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (snap.score || 0) / 100); x.stroke();
   x.fillStyle = '#12263a'; x.textAlign = 'center'; x.font = F(800, 92); x.fillText(snap.score ?? '–', cx, cy + 22); x.font = F(600, 28); x.fillStyle = '#5d6b78'; x.fillText('/100', cx, cy + 64); x.textAlign = 'left';
   const [lab] = S.failed ? ['Données indisponibles'] : scoreLabel(snap.score);
