@@ -9,8 +9,6 @@ on:
     workflows: ['Publier CheckMap']
     types: [completed]
   workflow_dispatch:
-  push:
-    branches: [services-ouverts]
 
 permissions:
   contents: read
