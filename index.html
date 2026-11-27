@@ -11,13 +11,19 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<link rel="preload" href="lib/fonts/overpass-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Overpass';font-style:normal;font-weight:400;font-display:swap;src:url(lib/fonts/overpass-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Overpass';font-style:normal;font-weight:400;font-display:swap;src:url(lib/fonts/overpass-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Overpass';font-style:normal;font-weight:600;font-display:swap;src:url(lib/fonts/overpass-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Overpass';font-style:normal;font-weight:600;font-display:swap;src:url(lib/fonts/overpass-latin-ext-600-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Overpass';font-style:normal;font-weight:800;font-display:swap;src:url(lib/fonts/overpass-latin-800-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Overpass';font-style:normal;font-weight:800;font-display:swap;src:url(lib/fonts/overpass-latin-ext-800-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+</style>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css">
+<script src="lib/leaflet/leaflet.js"></script>
+<link rel="stylesheet" href="lib/leaflet/MarkerCluster.css">
+<script src="lib/leaflet/leaflet.markercluster.js"></script>
 <style>
 /* CheckMap */
 :root{
@@ -263,8 +269,6 @@ button{cursor:pointer}
 /* Thème Néon nuit */
 #arc{stroke:var(--mag)}
 #sky{position:fixed;inset:0;z-index:1;pointer-events:none;display:none;mix-blend-mode:soft-light;opacity:.85;background:linear-gradient(180deg,#3b1d8f 0%,#ff2bd6 55%,#ff8a3d 100%)}
-.neon-base{filter:grayscale(1) brightness(1.1) contrast(3) sepia(1) hue-rotate(255deg) saturate(5)}
-.neon-labels{filter:grayscale(1) sepia(1) hue-rotate(150deg) saturate(4) brightness(1.35)}
 body.neon{--panel:#130a26;--land:#1b1036;--ink:#f6edff;--mute:#b9a7dc;--line:#3b2869;--soft:#21134a;--mag:#ff2bd6;--mag-ink:#ff6be6;--brown:#ff9a4d;--cyan:#2ee6ff;color-scheme:dark}
 body.neon #map{background:#07020f}
 body.neon #sky{display:block}
@@ -298,7 +302,6 @@ body.neon .leaflet-control-attribution{background:rgba(19,10,38,.8);color:#b9a7d
 body.neon .leaflet-control-attribution a{color:#2ee6ff}
 
 /* Thème Soleil */
-.sun-base{filter:saturate(1.9) hue-rotate(-4deg) contrast(1.1) brightness(1.06)}
 body.sun{--panel:#fffaf0;--land:#ffffff;--ink:#12263a;--mute:#5d6b78;--line:#f0dfc4;--soft:#fff1dc;--mag:#ff4f7b;--mag-ink:#e0245e;--brown:#ff7a1a;--cyan:#00a8c6;color-scheme:light}
 body.sun #map{background:#bfeff5}
 body.sun #sky{display:block;opacity:1;background:linear-gradient(160deg,rgba(0,200,255,.5),rgba(255,170,60,.45))}
@@ -481,7 +484,7 @@ body.sun .cl span{background:#00a8c6}
       <button class="btn" id="shareBtn" type="button">Partager le lien</button>
       <button class="btn" id="pinBtn" type="button">Comparer…</button>
     </div>
-    <p class="credits">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL), extraits Geofabrik mis à jour chaque semaine et API Overpass. Géocodage Photon et Nominatim. Distances à vol d'oiseau, temps de marche estimés avec 30 % de détour.</p>
+    <p class="credits">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL), extraits Geofabrik mis à jour chaque semaine. Fonds de carte <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> et <a href="https://www.ign.fr/" target="_blank" rel="noopener">IGN</a>. Adresses, itinéraires et zones de marche : Géoplateforme de l'IGN (Licence Ouverte). Distances à vol d'oiseau, temps de marche estimés avec 30 % de détour.</p>
     <p class="legal"><a href="confidentialite.html">Confidentialité</a><a href="assistance.html">Assistance</a></p>
   </div>
 </aside>
@@ -1067,46 +1070,83 @@ const servedOverHttp = /^https?:$/.test(location.protocol);
 const map = L.map('map', { zoomControl: false, attributionControl: true, maxZoom: 19 }).setView([46.6, 2.4], 6);
 L.control.zoom({ position: 'topright' }).addTo(map);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
-// Fonds de carte gratuits et sans clé. Si un fond ne charge pas, on passe au suivant de la liste.
+// Fonds de carte sans clé et utilisables dans une appli commerciale :
+// tuiles vectorielles OpenFreeMap (styles maison ou styles OpenFreeMap) et, en secours sans WebGL, les plans de l'IGN.
 const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
-const tl = (url, opt) => L.tileLayer(url, { maxZoom: 19, ...opt });
+const OFM_ATTR = '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · ' + OSM_ATTR;
+const OFM = 'https://tiles.openfreemap.org/';
+const IGN_ATTR = 'Fond © <a href="https://www.ign.fr/">IGN</a> · Géoplateforme';
+const ign = (layer, fmt, opt) => L.tileLayer(`https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=PM&FORMAT=${fmt}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`,
+  { maxZoom: 19, attribution: IGN_ATTR, ...opt });
 
-// Style vectoriel « Lagon » (tuiles OpenFreeMap, schéma OpenMapTiles)
-const LAGON_STYLE = (() => {
-  const C = {
-    land: '#f6f1e7', urban: '#f8eee4', bShadow: '#e2d3df', bLine: '#eddfe6',
-    water: '#12b6dc', coast: '#7eecf0', river: '#2cc6e4', sand: '#ffd98a', grass: '#b4e38a', wood: '#62bd6c',
+// Palettes des styles maison (schéma OpenMapTiles)
+const PALETTES = {
+  lagon: {
+    land: '#f6f1e7', urban: '#f8eee4', commercial: '#fde9f0', industrial: '#eeeaf8', school: '#fff1b3', hospital: '#ffdfe6',
+    bShadow: '#e2d3df', bLine: '#eddfe6', bTop: ['#fff3e4', '#ffe9ef', '#f0ebff', '#e2f2ff'],
+    water: '#12b6dc', ocean: '#0ea8d8', pool: '#4fe3f0', coast: '#7eecf0', river: '#2cc6e4',
+    sand: '#ffd98a', grass: '#b4e38a', farmland: '#eaf2bd', wetland: '#a9e6cf', wood: '#62bd6c',
+    park: '#8fd96a', green: '#9bdc72', pitch: '#6fd48a', playground: '#ffd166', cemetery: '#bcd9b4',
     minor: '#ffffff', minorCase: '#e2d5e4', major: '#fff1b8', majorCase: '#f2b84b', motor: '#ffb48f', motorCase: '#ee7d55',
-    path: '#f5a8c6', rail: '#9d86e8', label: '#5b4c7a', place: '#24305e'
-  };
-  // Bâtiments pastel selon leur hauteur : pêche, rose, lavande, ciel
-  const bTop = ['interpolate', ['linear'], ['to-number', ['coalesce', ['get', 'render_height'], 8]], 0, '#fff3e4', 12, '#ffe9ef', 24, '#f0ebff', 45, '#e2f2ff'];
+    path: '#f5a8c6', rail: '#9d86e8', label: '#5b4c7a', halo: '#ffffff', place: '#24305e', placeHalo: 'rgba(255,255,255,0.9)',
+    waterLabel: '#ffffff', waterHalo: '#0a8fbf'
+  },
+  // Plein soleil : routes jaune d'or et orange, eau turquoise, parcs vert tendre
+  sun: {
+    land: '#fff8ec', urban: '#fff0dc', commercial: '#ffe3d3', industrial: '#f3e7dc', school: '#fff3a3', hospital: '#ffdada',
+    bShadow: '#efd9bd', bLine: '#f3dcc0', bTop: ['#ffefdc', '#ffe6d0', '#ffddc6', '#ffd4bc'],
+    water: '#3fc3f2', ocean: '#22b2ec', pool: '#5fe2f6', coast: '#a6ecff', river: '#3ab8ef',
+    sand: '#ffe08a', grass: '#c6ec8a', farmland: '#f3f2b8', wetland: '#b2ecd2', wood: '#7ccf6a',
+    park: '#a3e070', green: '#b0e57c', pitch: '#8ad86b', playground: '#ffcf5c', cemetery: '#cadfb6',
+    minor: '#ffffff', minorCase: '#e8d2b2', major: '#ffe14a', majorCase: '#f0a52c', motor: '#ff9a3c', motorCase: '#de6418',
+    path: '#ff8fa3', rail: '#b0896a', label: '#4a3420', halo: '#ffffff', place: '#2a1a10', placeHalo: 'rgba(255,255,255,0.92)',
+    waterLabel: '#ffffff', waterHalo: '#1488c4'
+  },
+  // Nuit néon : ville violet sombre, grands axes magenta et orange lumineux, noms de rues cyan
+  neon: {
+    land: '#120826', urban: '#170b33', commercial: '#22093d', industrial: '#190e3a', school: '#231a3e', hospital: '#2c0d34',
+    bShadow: '#06020e', bLine: '#5b2fa6', bTop: ['#1f0f42', '#271452', '#2f1863', '#381c74'],
+    water: '#070a2b', ocean: '#050722', pool: '#0b3d5c', coast: '#2ee6ff', river: '#1ec8ff',
+    sand: '#2a1638', grass: '#0f2234', farmland: '#16152e', wetland: '#0d2a33', wood: '#0b2c32',
+    park: '#0d3236', green: '#0f2f34', pitch: '#0f3a36', playground: '#3a2410', cemetery: '#17242c',
+    minor: '#3f2a78', minorCase: '#170b33', major: '#ff2bd6', majorCase: '#5c0d56', motor: '#ff9a4d', motorCase: '#6a2a0c',
+    path: '#2ee6ff', rail: '#8b5cf6', label: '#2ee6ff', halo: '#130a26', place: '#ff6be6', placeHalo: 'rgba(19,10,38,0.92)',
+    waterLabel: '#2ee6ff', waterHalo: '#070a2b', glow: true
+  }
+};
+function glStyle(C){
+  // Bâtiments colorés selon leur hauteur
+  const bTop = ['interpolate', ['linear'], ['to-number', ['coalesce', ['get', 'render_height'], 8]], 0, C.bTop[0], 12, C.bTop[1], 24, C.bTop[2], 45, C.bTop[3]];
   const z = (a, b, c, d) => ['interpolate', ['exponential', 1.5], ['zoom'], a, b, c, d];
   const cls = (...v) => ['match', ['get', 'class'], v, true, false];
   const src = { source: 'omt' };
-  const road = (id, filter, color, w, minzoom = 5) => ({ id, type: 'line', ...src, 'source-layer': 'transportation', minzoom, filter, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': w } });
+  const road = (id, filter, color, w, minzoom = 5, extra = {}) => ({ id, type: 'line', ...src, 'source-layer': 'transportation', minzoom, filter, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': w, ...extra } });
   const major = cls('primary', 'secondary', 'tertiary'), motor = cls('motorway', 'trunk'), minor = cls('minor', 'service');
+  const glow = C.glow ? [
+    road('major-glow', major, C.major, z(8, 3, 18, 44), 8, { 'line-blur': z(8, 3, 18, 26), 'line-opacity': 0.45 }),
+    road('motor-glow', motor, C.motor, z(5, 3, 18, 50), 5, { 'line-blur': z(5, 3, 18, 30), 'line-opacity': 0.45 })
+  ] : [];
   return {
     version: 8,
-    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-    sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+    glyphs: OFM + 'fonts/{fontstack}/{range}.pbf',
+    sources: { omt: { type: 'vector', url: OFM + 'planet' } },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': C.land } },
       { id: 'urban', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('residential', 'commercial', 'industrial', 'retail', 'neighbourhood', 'suburb', 'quarter', 'school', 'university', 'college', 'kindergarten', 'hospital'),
-        paint: { 'fill-color': ['match', ['get', 'class'], ['commercial', 'retail'], '#fde9f0', 'industrial', '#eeeaf8', ['school', 'university', 'college', 'kindergarten'], '#fff1b3', 'hospital', '#ffdfe6', C.urban] } },
+        paint: { 'fill-color': ['match', ['get', 'class'], ['commercial', 'retail'], C.commercial, 'industrial', C.industrial, ['school', 'university', 'college', 'kindergarten'], C.school, 'hospital', C.hospital, C.urban] } },
       { id: 'sand', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('sand', 'beach'), paint: { 'fill-color': C.sand } },
-      { id: 'grass', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('grass', 'farmland', 'wetland'), paint: { 'fill-color': ['match', ['get', 'class'], 'farmland', '#eaf2bd', 'wetland', '#a9e6cf', C.grass], 'fill-opacity': 0.85 } },
+      { id: 'grass', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('grass', 'farmland', 'wetland'), paint: { 'fill-color': ['match', ['get', 'class'], 'farmland', C.farmland, 'wetland', C.wetland, C.grass], 'fill-opacity': 0.85 } },
       { id: 'wood', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('wood', 'forest'), paint: { 'fill-color': C.wood, 'fill-opacity': 0.8 } },
-      { id: 'park', type: 'fill', ...src, 'source-layer': 'park', paint: { 'fill-color': '#8fd96a', 'fill-opacity': 0.85 } },
+      { id: 'park', type: 'fill', ...src, 'source-layer': 'park', paint: { 'fill-color': C.park, 'fill-opacity': 0.85 } },
       { id: 'parkuse', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('park', 'grass', 'cemetery', 'pitch', 'playground', 'garden'),
-        paint: { 'fill-color': ['match', ['get', 'class'], 'pitch', '#6fd48a', 'playground', '#ffd166', 'cemetery', '#bcd9b4', '#9bdc72'], 'fill-opacity': 0.9 } },
+        paint: { 'fill-color': ['match', ['get', 'class'], 'pitch', C.pitch, 'playground', C.playground, 'cemetery', C.cemetery, C.green], 'fill-opacity': 0.9 } },
       { id: 'coast', type: 'line', ...src, 'source-layer': 'water', paint: { 'line-color': C.coast, 'line-width': z(8, 2, 16, 18), 'line-blur': z(8, 2, 16, 14), 'line-opacity': 0.9 } },
-      { id: 'water', type: 'fill', ...src, 'source-layer': 'water', paint: { 'fill-color': ['match', ['get', 'class'], 'ocean', '#0ea8d8', 'swimming_pool', '#4fe3f0', C.water] } },
+      { id: 'water', type: 'fill', ...src, 'source-layer': 'water', paint: { 'fill-color': ['match', ['get', 'class'], 'ocean', C.ocean, 'swimming_pool', C.pool, C.water] } },
       { id: 'water-edge', type: 'line', ...src, 'source-layer': 'water', paint: { 'line-color': C.coast, 'line-width': z(10, 1, 17, 7), 'line-blur': z(10, 1, 17, 6), 'line-offset': z(10, 0.5, 17, 3.5), 'line-opacity': 0.75 } },
       { id: 'river', type: 'line', ...src, 'source-layer': 'waterway', paint: { 'line-color': C.river, 'line-width': z(8, 0.5, 17, 6) } },
       { ...road('path', cls('path', 'track', 'pedestrian'), C.path, z(14, 0.8, 18, 3.2), 14), paint: { 'line-color': C.path, 'line-width': z(14, 0.5, 18, 2.4), 'line-dasharray': [1.2, 1.6], 'line-opacity': 0.85 } },
       { id: 'rail', type: 'line', ...src, 'source-layer': 'transportation', minzoom: 11, filter: cls('rail', 'transit'), paint: { 'line-color': C.rail, 'line-width': z(11, 0.8, 18, 3), 'line-dasharray': [3, 2] } },
+      ...glow,
       road('minor-case', minor, C.minorCase, z(12, 1, 18, 23), 12),
       road('major-case', major, C.majorCase, z(8, 1, 18, 30), 8),
       road('motor-case', motor, C.motorCase, z(5, 1.2, 18, 34)),
@@ -1115,15 +1155,15 @@ const LAGON_STYLE = (() => {
       road('motor', motor, C.motor, z(5, 0.8, 18, 29)),
       { id: 'bld-shadow', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': C.bShadow, 'fill-translate': [1.5, 2] } },
       { id: 'bld', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': bTop, 'fill-outline-color': C.bLine } },
-      { id: 'road-label', type: 'symbol', ...src, 'source-layer': 'transportation_name', minzoom: 14, layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': z(14, 10, 18, 14), 'text-max-angle': 30 }, paint: { 'text-color': C.label, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 } },
-      { id: 'water-label', type: 'symbol', ...src, 'source-layer': 'water_name', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Italic'], 'text-size': 13 }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#0a8fbf', 'text-halo-width': 1.2 } },
-      { id: 'place-label', type: 'symbol', ...src, 'source-layer': 'place', filter: cls('city', 'town', 'village', 'suburb', 'quarter', 'neighbourhood'), layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'class'], 'city', 17, 'town', 15, 13], 'text-transform': 'uppercase', 'text-letter-spacing': 0.06, 'text-max-width': 8 }, paint: { 'text-color': C.place, 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.6 } }
+      { id: 'road-label', type: 'symbol', ...src, 'source-layer': 'transportation_name', minzoom: 14, layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': z(14, 10, 18, 14), 'text-max-angle': 30 }, paint: { 'text-color': C.label, 'text-halo-color': C.halo, 'text-halo-width': 1.4 } },
+      { id: 'water-label', type: 'symbol', ...src, 'source-layer': 'water_name', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Italic'], 'text-size': 13 }, paint: { 'text-color': C.waterLabel, 'text-halo-color': C.waterHalo, 'text-halo-width': 1.2 } },
+      { id: 'place-label', type: 'symbol', ...src, 'source-layer': 'place', filter: cls('city', 'town', 'village', 'suburb', 'quarter', 'neighbourhood'), layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'class'], 'city', 17, 'town', 15, 13], 'text-transform': 'uppercase', 'text-letter-spacing': 0.06, 'text-max-width': 8 }, paint: { 'text-color': C.place, 'text-halo-color': C.placeHalo, 'text-halo-width': 1.6 } }
     ]
   };
-})();
+}
 
-const GL_CSS = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
-const GL_JS = ['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js'];
+const GL_CSS = 'lib/maplibre/maplibre-gl.css';
+const GL_JS = ['lib/maplibre/maplibre-gl.js', 'lib/maplibre/leaflet-maplibre-gl.js'];
 let glLoading = null;
 function loadGL(){
   if (!glLoading) {
@@ -1157,27 +1197,26 @@ const VectorBase = L.Layer.extend({
   onRemove(m){ this._active = false; if (this._gl && m.hasLayer(this._gl)) m.removeLayer(this._gl); }
 });
 
+const vec = (name, style) => ({ name, vector: true, main: new VectorBase(style, { attribution: OFM_ATTR }) });
 const ALL_BASES = {
-  lagon: () => ({ name: 'Lagon', main: new VectorBase(LAGON_STYLE, { attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · ' + OSM_ATTR }) }),
-  // Plan des rues Esri recoloré en CSS
-  sun:   () => ({ name: 'Soleil (jour)', main: tl(ESRI + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { className: 'sun-base', attribution: OSM_ATTR + ' · fond Esri' }) }),
-  // Fond sombre Esri recoloré en CSS, noms de rues en cyan
-  neon:  () => { const base = tl(ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, className: 'neon-base', attribution: OSM_ATTR + ' · fond Esri' });
-                 return { name: 'Néon nuit', key: 'neon', main: base, layer: L.layerGroup([base, tl(ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, className: 'neon-labels', zIndex: 2 })]) }; },
-  osm:   () => ({ name: 'Plan OpenStreetMap', main: tl('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: OSM_ATTR }) }),
-  esri:  () => ({ name: 'Plan des rues (Esri)', main: tl(ESRI + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: OSM_ATTR + ' · fond Esri' }) }),
-  osmfr: () => ({ name: 'OpenStreetMap France', main: tl('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { subdomains: 'abc', attribution: OSM_ATTR + ' · fond OSM France' }) }),
-  hot:   () => ({ name: 'Humanitaire (OSM)', main: tl('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { subdomains: 'abc', attribution: OSM_ATTR + ' · fond HOT, OSM France' }) })
+  lagon:    () => vec('Lagon', glStyle(PALETTES.lagon)),
+  sun:      () => vec('Soleil (jour)', glStyle(PALETTES.sun)),
+  neon:     () => vec('Néon nuit', glStyle(PALETTES.neon)),
+  liberty:  () => vec('Plan classique', OFM + 'styles/liberty'),
+  positron: () => vec('Plan épuré', OFM + 'styles/positron'),
+  // Secours sans WebGL, et vue aérienne (France et outre-mer)
+  ign:      () => ({ name: 'Plan IGN', main: ign('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png', { maxNativeZoom: 19 }) }),
+  photo:    () => ({ name: 'Photo aérienne (IGN)', main: ign('ORTHOIMAGERY.ORTHOPHOTOS', 'image/jpeg', { maxNativeZoom: 19 }) })
 };
-// En file://, pas d'en-tête Referer : tile.openstreetmap.org renvoie « Access blocked ». On l'écarte dans ce cas.
-const BASES = (servedOverHttp ? ['lagon', 'sun', 'neon', 'osm', 'esri', 'osmfr', 'hot'] : ['lagon', 'sun', 'neon', 'esri', 'osmfr', 'hot'])
+const BASES = ['lagon', 'sun', 'neon', 'liberty', 'positron', 'ign', 'photo']
   .map(k => { const b = ALL_BASES[k](); b.key = k; b.layer = b.layer || b.main; return b; });
 const savedBase = store.get('cm:base', 'lagon');
 let baseIdx = Math.max(0, BASES.findIndex(b => b.key === savedBase)), autoSwitch = true;
 function baseFailed(i){
   if (i !== baseIdx) return;
-  if (!autoSwitch || i >= BASES.length - 1) return toast('Ce fond de carte ne répond pas. Essayez-en un autre (bouton calques).');
-  map.removeLayer(BASES[i].layer); baseIdx = i + 1; BASES[baseIdx].layer.addTo(map);
+  const next = BASES.findIndex((b, j) => j > i && !(BASES[i].vector && b.vector));
+  if (!autoSwitch || next < 0) return toast('Ce fond de carte ne répond pas. Essayez-en un autre (bouton calques).');
+  map.removeLayer(BASES[i].layer); baseIdx = next; BASES[baseIdx].layer.addTo(map);
   applyTheme(); toast(`Fond de carte indisponible, passage à « ${BASES[baseIdx].name} ».`);
 }
 BASES.forEach((b, i) => {
@@ -1268,43 +1307,78 @@ async function setCenter(c, label, { fit = true, analyze: run = true } = {}){
 function setLabel(l){ S.label = l; $('#placeLabel').textContent = l; }
 
 /* ============================================================
-   Géocodage (Photon pour l'autocomplétion, Nominatim en secours)
+   Géocodage : Géoplateforme de l'IGN (adresses BAN + lieux-dits et points d'intérêt),
+   sans clé et ouverte à tous les usages. Photon seulement en secours (panne, adresse hors de France).
    ============================================================ */
+const GEO = 'https://data.geopf.fr/geocodage/';
+const first = v => Array.isArray(v) ? v[0] : v;
+// Résultat Géoplateforme → { c, main, sub, label, score }
+function geoItem(f){
+  const p = f.properties, c = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+  if (p._type === 'poi') {
+    const main = p.toponym || first(p.name) || '';
+    const city = first(p.city) || '', cp = first(p.postcode) || '';
+    const kind = (p.category || []).find(k => !/^(zone|administratif|équipement|transport|élément)/.test(k)) || '';
+    const where = [cp, city].filter(Boolean).join(' ');
+    const town = (p.category || []).includes('commune');
+    return { c, main, sub: town ? (p.extrafields && p.extrafields.status) || 'Commune' : [kind && kind[0].toUpperCase() + kind.slice(1), where].filter(Boolean).join(' · '),
+             label: town || !city || main.includes(city) ? main : `${main}, ${city}`, score: (p.score || 0) + (10 - (p.classification || 9)) * 0.012, town };
+  }
+  const town = p.type === 'municipality';
+  const main = town ? p.city : p.name;
+  const sub = town ? p.context : [p.postcode, p.city].filter(Boolean).join(' ');
+  return { c, main, sub, label: p.label, score: (p.score || 0) + ((p.importance || 0.4) - 0.4) * 0.15, town };
+}
+const kmBetween = (a, b) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((b[0] - a[0]) * Math.PI / 360) ** 2 + Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin((b[1] - a[1]) * Math.PI / 360) ** 2));
+async function geoSearch(text, limit, signal){
+  const bias = S.center ? `&lat=${S.center[0].toFixed(5)}&lon=${S.center[1].toFixed(5)}` : '';
+  const j = await fetchJSON(`${GEO}search?q=${encodeURIComponent(text)}&limit=${Math.max(limit, 8)}&index=address,poi&autocomplete=1${bias}`, { signal }, 7000);
+  const items = (j.features || []).filter(f => f.geometry && f.geometry.coordinates).map(geoItem).filter(i => i.main);
+  // Petit bonus aux résultats proches du point en cours, puis on retire les doublons (même nom à moins de 300 m)
+  if (S.center) for (const i of items) i.score += 0.12 * Math.exp(-kmBetween(S.center, i.c) / 40);
+  items.sort((x, y) => y.score - x.score);
+  const out = [];
+  for (const i of items) if (!out.some(o => o.main.toLowerCase() === i.main.toLowerCase() && kmBetween(o.c, i.c) < (i.town || o.town ? 8 : 0.3))) out.push(i);
+  return out.slice(0, limit);
+}
 function photonLabel(p){
   const street = [p.housenumber, p.street].filter(Boolean).join(' ');
   const city = [p.postcode, p.city || p.town || p.village || p.county].filter(Boolean).join(' ');
   const parts = [p.name, street, city, p.country && p.country !== 'France' ? p.country : ''].filter(Boolean);
   return [...new Set(parts)].join(', ');
 }
-// Photon limite parfois les requêtes : après un échec, Nominatim pendant 60 s.
-let photonDownUntil = 0;
-const photonOk = () => Date.now() > photonDownUntil;
-const photonFail = () => { photonDownUntil = Date.now() + 60000; };
-async function geocode(q){
-  const bias = S.center ? `&lat=${S.center[0]}&lon=${S.center[1]}&location_bias_scale=0.3` : '';
-  if (photonOk()) try {
-    const j = await fetchJSON(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&lang=fr${bias}`, {}, 7000);
-    const f = j.features && j.features[0];
-    if (f) return { c: [f.geometry.coordinates[1], f.geometry.coordinates[0]], label: photonLabel(f.properties) };
-  } catch (e) { photonFail(e); }
-  try {
-    const j = await fetchJSON(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`);
-    if (j[0]) return { c: [+j[0].lat, +j[0].lon], label: j[0].display_name.split(', ').slice(0, 4).join(', ') };
-  } catch {}
-  return null;
+async function photonSearch(text, limit, signal){
+  const j = await fetchJSON(`https://photon.komoot.io/api/?q=${encodeURIComponent(text)}&limit=${limit}&lang=fr`, { signal }, 6000);
+  return (j.features || []).map(f => {
+    const p = f.properties;
+    const main = p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || p.city || '';
+    const sub = [p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : '', [p.postcode, p.city || p.town || p.village].filter(Boolean).join(' '), p.country !== 'France' ? p.country : ''].filter(Boolean).join(', ');
+    return { c: [f.geometry.coordinates[1], f.geometry.coordinates[0]], main, sub, label: photonLabel(p) };
+  });
+}
+// Photon : seulement si la Géoplateforme ne répond pas, ou (recherche validée) si elle ne trouve rien
+async function findPlaces(text, limit, signal, final = false){
+  try { const r = await geoSearch(text, limit, signal); if (r.length || !final) return r; }
+  catch (e) { if (signal && signal.aborted) throw e; }
+  return photonSearch(text, limit, signal);
+}
+async function geocode(text){
+  try { const r = await findPlaces(text, 1, undefined, true); return r[0] || null; } catch { return null; }
 }
 async function reverse(c){
   const tok = ++S.labelTok;
   let label = null;
-  if (photonOk()) try {
-    const j = await fetchJSON(`https://photon.komoot.io/reverse?lat=${c[0]}&lon=${c[1]}&lang=fr`, {}, 6000);
-    const f = j.features && j.features[0];
-    if (f) label = photonLabel(f.properties);
-  } catch (e) { photonFail(e); }
-  if (!label) try {
-    const j = await fetchJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=fr&lat=${c[0]}&lon=${c[1]}`, {}, 8000);
-    if (j.display_name) label = j.display_name.split(', ').slice(0, 4).join(', ');
-  } catch {}
+  try {
+    const j = await fetchJSON(`${GEO}reverse?lat=${c[0].toFixed(6)}&lon=${c[1].toFixed(6)}&index=address&limit=1`, {}, 6000);
+    const p = j.features && j.features[0] && j.features[0].properties;
+    if (p) label = (p.distance > 400 ? 'Près de ' : '') + p.label;
+  } catch {
+    try {   // secours ponctuel si la Géoplateforme ne répond pas
+      const j = await fetchJSON(`https://photon.komoot.io/reverse?lat=${c[0]}&lon=${c[1]}&lang=fr`, {}, 6000);
+      const f = j.features && j.features[0];
+      if (f) label = photonLabel(f.properties);
+    } catch {}
+  }
   if (label && tok === S.labelTok) { setLabel(label); writeHash(); }
 }
 
@@ -1320,21 +1394,14 @@ q.addEventListener('input', () => {
 q.addEventListener('focus', () => { if (isMobile()) openSheet(true); });
 async function loadSugg(v){
   if (suggCtl) suggCtl.abort();
-  suggCtl = new AbortController();
-  const bias = S.center ? `&lat=${S.center[0]}&lon=${S.center[1]}&location_bias_scale=0.3` : '';
+  const ctl = suggCtl = new AbortController();
   try {
-    if (!photonOk()) throw new Error('Photon en pause');
-    const j = await fetchJSON(`https://photon.komoot.io/api/?q=${encodeURIComponent(v)}&limit=6&lang=fr${bias}`, { signal: suggCtl.signal }, 6000);
-    suggItems = (j.features || []).map(f => {
-      const p = f.properties;
-      const main = p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || p.city || '';
-      const sub = [p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : '', [p.postcode, p.city || p.town || p.village].filter(Boolean).join(' '), p.country !== 'France' ? p.country : ''].filter(Boolean).join(', ');
-      return { c: [f.geometry.coordinates[1], f.geometry.coordinates[0]], main, sub, label: photonLabel(p) };
-    });
+    suggItems = await findPlaces(v, 6, ctl.signal);
+    if (ctl !== suggCtl) return;
     suggSel = -1; renderSugg();
   } catch (e) {
-    if (suggCtl.signal.aborted) return;          // une frappe plus récente a pris le relais
-    if (photonOk()) photonFail(); suggItems = []; suggSel = -1;
+    if (ctl.signal.aborted) return;          // une frappe plus récente a pris le relais
+    suggItems = []; suggSel = -1;
     sugg.innerHTML = '<li aria-disabled="true"><small>Suggestions indisponibles pour le moment. Appuyez sur Entrée pour lancer la recherche.</small></li>';
     sugg.hidden = false;
   }
@@ -1807,7 +1874,7 @@ function saveHistory(){
 }
 
 /* ============================================================
-   Mes lieux importants : temps de trajet (OSRM, estimation à vol d'oiseau en secours)
+   Mes lieux importants : temps de trajet (itinéraires IGN, estimation à vol d'oiseau en secours)
    ============================================================ */
 const KINDS = {
   travail: { name: 'Travail', letter: 'T', color: '#2f62ff' },
@@ -1817,10 +1884,18 @@ const KINDS = {
   autre:   { name: 'Autre',   letter: '★', color: '#8b5cf6' }
 };
 const MODES = [
-  { id: 'foot', name: 'À pied', osrm: 'routed-foot', est: d => d * 1.3 / WALK_MPM },
-  { id: 'bike', name: 'Vélo',   osrm: 'routed-bike', est: d => d * 1.3 / 250 },
-  { id: 'car',  name: 'Voiture', osrm: 'routed-car', est: d => 3 + d * 1.4 / 420 }
+  { id: 'foot', name: 'À pied', est: d => d * 1.3 / WALK_MPM },
+  { id: 'bike', name: 'Vélo',   est: d => d * 1.3 / 250 },
+  { id: 'car',  name: 'Voiture', est: d => 3 + Math.min(d, 10000) * 1.4 / 420 + Math.max(0, d - 10000) * 1.25 / 1300 }   // 25 km/h en ville, puis 78 km/h
 ];
+// Itinéraires de la Géoplateforme IGN (réseau BD TOPO), sans clé. Marche à 5 km/h et vélo à 15 km/h sur l'itinéraire piéton.
+const NAV = 'https://data.geopf.fr/navigation/';
+const lonlat = c => `${c[1].toFixed(6)},${c[0].toFixed(6)}`;
+async function routeIGN(profile, a, b){
+  const j = await fetchJSON(`${NAV}itineraire?resource=bdtopo-osrm&profile=${profile}&optimization=fastest&start=${lonlat(a)}&end=${lonlat(b)}&distanceUnit=meter&timeUnit=second&geometryFormat=geojson&getSteps=false&getBbox=false`, {}, 15000);
+  if (!(j.distance >= 0 && j.duration >= 0)) throw new Error('itinéraire');
+  return j;
+}
 let myPlaces = store.get('cm:places', []);
 const placesLayer = L.layerGroup().addTo(map);
 function drawMyPlaces(){
@@ -1836,21 +1911,30 @@ async function computeTrips(){
   const key = placeKey(S.center), sig = key + '|' + myPlaces.map(p => p.id).join(',');
   if (!myPlaces.length) { S.trips = { key, sig, rows: [] }; renderTrips(); return; }
   if (S.trips && S.trips.sig === sig && !S.trips.loading) { renderTrips(); return; }
-  const rows = myPlaces.map(p => ({ id: p.id, name: p.name, kind: p.kind, d: dist(S.center, p.c), t: {}, est: {} }));
+  const rows = myPlaces.map(p => ({ id: p.id, name: p.name, kind: p.kind, d: dist(S.center, p.c), t: {}, est: {}, skip: {} }));
   S.trips = { key, sig, rows, loading: true }; renderTrips();
-  const coords = [S.center, ...myPlaces.map(p => p.c)].map(c => `${c[1].toFixed(6)},${c[0].toFixed(6)}`).join(';');
-  await Promise.all(MODES.map(async m => {
-    try {
-      const j = await fetchJSON(`https://routing.openstreetmap.de/${m.osrm}/table/v1/driving/${coords}?sources=0&annotations=duration,distance`, {}, 15000);
-      if (j.code !== 'Ok') throw new Error(j.code);
-      rows.forEach((r, i) => { const s = j.durations[0][i + 1]; if (s != null) r.t[m.id] = s / 60; else { r.t[m.id] = m.est(r.d); r.est[m.id] = true; } });
-    } catch { rows.forEach(r => { r.t[m.id] = m.est(r.d); r.est[m.id] = true; }); }
+  const from = S.center.slice();
+  const guess = (r, ...ids) => ids.forEach(id => { r.t[id] = MODES.find(m => m.id === id).est(r.d); r.est[id] = true; });
+  await Promise.all(rows.map(async (r, i) => {
+    const to = myPlaces[i].c;
+    // Au-delà de 40 km, pas de temps à pied ni à vélo ; au-delà de 300 km sans itinéraire (autre île, autre pays), pas d'estimation
+    const near = r.d < 40000;
+    const [walk, car] = await Promise.allSettled([near ? routeIGN('pedestrian', from, to) : Promise.reject(), routeIGN('car', from, to)]);
+    if (walk.status === 'fulfilled') { r.t.foot = walk.value.distance / WALK_MPM; r.t.bike = walk.value.distance / 250; }
+    else if (near) guess(r, 'foot', 'bike');
+    else r.skip.foot = r.skip.bike = true;
+    if (car.status === 'fulfilled') r.t.car = car.value.duration / 60;
+    else if (r.d < 300000) guess(r, 'car');
+    else r.skip.car = true;
+    if (S.trips && S.trips.sig === sig) renderTrips();
   }));
   if (!S.trips || S.trips.sig !== sig) return;
   S.trips.loading = false; renderTrips(); saveHistory();
 }
 function tripLine(r){
-  return MODES.map(m => r.t[m.id] == null ? `<span>${m.name} …</span>` : `<span>${m.name} <b>${r.est[m.id] ? '≈ ' : ''}${fmtMin(r.t[m.id])}</b></span>`).join('');
+  const skip = r.skip || {};
+  if (MODES.every(m => skip[m.id])) return '<span>Trop loin pour un trajet du quotidien</span>';
+  return MODES.filter(m => !skip[m.id]).map(m => r.t[m.id] == null ? `<span>${m.name} …</span>` : `<span>${m.name} <b>${r.est[m.id] ? '≈ ' : ''}${fmtMin(r.t[m.id])}</b></span>`).join('');
 }
 function renderTrips(){
   const box = $('#trips');
@@ -1862,7 +1946,7 @@ function renderTrips(){
   box.innerHTML = myPlaces.map(p => {
     const k = KINDS[p.kind] || KINDS.autre, r = rows.find(x => x.id === p.id) || { t: {}, est: {} };
     return `<div class="trip"><span class="tk" style="--k:${k.color}">${k.letter}</span><div class="tm"><b>${esc(p.name)}</b><div class="tt">${tripLine(r)}</div></div><button type="button" class="x" data-del-place="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button></div>`;
-  }).join('') + '<p class="hint" style="margin:6px 0 0">Trajets calculés sur le réseau routier OpenStreetMap, hors trafic. Transports en commun : bientôt.</p>';
+  }).join('') + '<p class="hint" style="margin:6px 0 0">Trajets calculés sur le réseau routier de l\'IGN, hors trafic (marche 5 km/h, vélo 15 km/h). Transports en commun : bientôt.</p>';
 }
 $('#trips').addEventListener('click', e => {
   const b = e.target.closest('[data-del-place]'); if (!b) return;
@@ -2030,7 +2114,7 @@ function renderFiche(){
 }
 
 /* ============================================================
-   Isochrones piétonnes 5 / 10 / 15 min (Valhalla)
+   Isochrones piétonnes 5 / 10 / 15 min (Géoplateforme IGN, distance parcourue à 5 km/h)
    ============================================================ */
 const isoLayer = L.layerGroup().addTo(map);
 let showIso = store.get('cm:iso', true);
@@ -2057,11 +2141,13 @@ async function loadIso(){
   if (S.iso && S.iso.key === key) return drawIso();
   S.iso = { key, feats: null };
   try {
-    const q = { locations: [{ lat: c[0], lon: c[1] }], costing: 'pedestrian', contours: [{ time: 5 }, { time: 10 }, { time: 15 }], polygons: true, denoise: 0.6, generalize: 30 };
-    const j = await fetchJSON('https://valhalla1.openstreetmap.de/isochrone?json=' + encodeURIComponent(JSON.stringify(q)), {}, 15000);
+    const res = await Promise.allSettled([5, 10, 15].map(t =>
+      fetchJSON(`${NAV}isochrone?resource=bdtopo-valhalla&profile=pedestrian&costType=distance&costValue=${Math.round(t * WALK_MPM)}&distanceUnit=meter&point=${lonlat(c)}&geometryFormat=geojson`, {}, 15000)
+        .then(j => { if (!j.geometry || !/Polygon/.test(j.geometry.type)) throw new Error('isochrone'); return [t, j.geometry]; })));
     if (!S.iso || S.iso.key !== key) return;
+    if (!res.some(r => r.status === 'fulfilled')) throw new Error('isochrones');
     S.iso.feats = {};
-    for (const f of j.features || []) S.iso.feats[Math.round(f.properties.contour)] = f.geometry;
+    for (const r of res) if (r.status === 'fulfilled') S.iso.feats[r.value[0]] = r.value[1];
   } catch { if (S.iso && S.iso.key === key) S.iso.failed = true; }
   drawIso(); render();
 }
@@ -2139,7 +2225,7 @@ function snapHtml(x){
   const f = x.fiche || {};
   const risks = (f.risks || []).filter(r => r.level > 0).map(r => `${esc(r.name)} (${LVL[r.level].toLowerCase()})`).join(', ');
   const price = f.price && (f.price.appart || f.price.maison) ? [f.price.appart ? 'appart. ' + fmtEur(f.price.appart) + '/m²' : '', f.price.maison ? 'maison ' + fmtEur(f.price.maison) + '/m²' : ''].filter(Boolean).join(' · ') : '';
-  const trips = (x.trips || []).map(t => `<li><b>${esc(t.name)}</b> : ${MODES.map(m => t.t && t.t[m.id] != null ? m.name.toLowerCase() + ' ' + fmtMin(t.t[m.id]) : '').filter(Boolean).join(', ')}</li>`).join('');
+  const trips = (x.trips || []).map(t => `<li><b>${esc(t.name)}</b> : ${MODES.map(m => t.t && t.t[m.id] != null ? m.name.toLowerCase() + ' ' + fmtMin(t.t[m.id]) : '').filter(Boolean).join(', ') || 'trop loin'}</li>`).join('');
   const tc = f.freq ? `${freqLevel(f.freq.perHour)} : ${f.freq.routes.slice(0, 4).map(r => `${FREQ_MODES[r.mode].toLowerCase()} ${esc(r.name)} ${every(r)}`).join(', ')}` : '';
   return `<div class="bilan"><div class="hd"><strong>${x.score ?? '–'}</strong><span>/100 · rayon ${fmtDist(x.r || 800)}${x.q15 ? ` · Score 15 min ${x.q15.ok}/${x.q15.total}` : ''}</span></div>
     ${trips ? `<p style="margin:8px 0 0"><b>Trajets</b></p><ul class="tl">${trips}</ul>` : ''}
@@ -2250,7 +2336,7 @@ async function drawBilan(){
     for (const l of lines) { for (const w of wrapText(x, l, W - 128)) { if (y > H - 110) return; x.fillText(w, 64, y); y += 38; } }
     y += 22;
   };
-  block('Mes trajets', snap.trips.map(t => `${t.name} : ${MODES.map(m => t.t && t.t[m.id] != null ? m.name.toLowerCase() + ' ' + fmtMin(t.t[m.id]) : '').filter(Boolean).join(' · ')}`));
+  block('Mes trajets', snap.trips.map(t => `${t.name} : ${MODES.map(m => t.t && t.t[m.id] != null ? m.name.toLowerCase() + ' ' + fmtMin(t.t[m.id]) : '').filter(Boolean).join(' · ') || 'trop loin'}`));
   const f = snap.fiche || {};
   const rk = (f.risks || []).filter(r => r.level > 0).slice(0, 5).map(r => `${r.name} : ${LVL[r.level].toLowerCase()}`);
   const pr = f.price && (f.price.appart || f.price.maison) ? [`Prix médian : ${[f.price.appart ? 'appartements ' + fmtEur(f.price.appart) + '/m²' : '', f.price.maison ? 'maisons ' + fmtEur(f.price.maison) + '/m²' : ''].filter(Boolean).join(', ')}`] : [];
@@ -2300,14 +2386,18 @@ $('#bilanPdf').addEventListener('click', async () => {
   if (!bilanBlob) return;
   const b = $('#bilanPdf'); b.disabled = true; b.textContent = 'Création du PDF…';
   try {
-    if (!pdfLib) { await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'); pdfLib = window.jspdf; }
-    const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(bilanBlob); });
+    if (!pdfLib) { await loadScript('lib/jspdf/jspdf.umd.min.js'); pdfLib = window.jspdf; }
+    // Image en JPEG dans le PDF : quelques centaines de Ko au lieu de plusieurs Mo en PNG
+    const img = await createImageBitmap(bilanBlob), cv = document.createElement('canvas');
+    cv.width = img.width; cv.height = img.height;
+    const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0);
+    const url = cv.toDataURL('image/jpeg', 0.9);
     const doc = new pdfLib.jsPDF({ unit: 'pt', format: 'a4' });
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight(), w = pw - 60, h = w * 1500 / 1080;
-    doc.addImage(url, 'PNG', 30, Math.max(20, (ph - h) / 2), w, Math.min(h, ph - 40));
+    doc.addImage(url, 'JPEG', 30, Math.max(20, (ph - h) / 2), w, Math.min(h, ph - 40));
     doc.setProperties({ title: 'Bilan CheckMap : ' + S.label });
     await shareFile(doc.output('blob'), fileName('pdf'), 'Bilan CheckMap : ' + S.label);
-  } catch { toast('Création du PDF impossible (connexion nécessaire la première fois).'); }
+  } catch { toast('Création du PDF impossible pour le moment.'); }
   b.disabled = false; b.textContent = 'PDF';
 });
 

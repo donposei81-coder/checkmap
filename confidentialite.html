@@ -72,17 +72,16 @@ footer{text-align:center;color:var(--mute);font-size:14px;padding:8px 16px 32px}
 </section>
 <section>
 <h2>Ce qui est envoyé à des services tiers</h2>
-<p>Pour afficher la carte et calculer le score, l'appli interroge directement des services publics et gratuits. Ils reçoivent la requête (coordonnées du point analysé ou texte de l'adresse recherchée) et, comme tout site web, l'adresse IP de votre appareil. Aucun identifiant personnel ne leur est transmis par CheckMap.</p>
+<p>Pour afficher la carte et calculer le score, l'appli interroge directement des services publics, ouverts et sans compte. Ils reçoivent la requête (coordonnées du point analysé ou texte de l'adresse recherchée) et, comme tout site web, l'adresse IP de votre appareil. Aucun identifiant personnel ne leur est transmis par CheckMap.</p>
 <table>
 <tr><th>Service</th><th>Utilisation</th><th>Données envoyées</th></tr>
-<tr><td>API Overpass (overpass-api.de, overpass.kumi.systems, overpass.private.coffee, maps.mail.ru)</td><td>Commerces et services autour du point</td><td>Coordonnées et rayon</td></tr>
-<tr><td>Photon (Komoot) et Nominatim (Fondation OpenStreetMap)</td><td>Recherche d'adresse</td><td>Texte saisi, coordonnées</td></tr>
-<tr><td>OSRM et Valhalla (FOSSGIS)</td><td>Temps de marche, vélo, voiture</td><td>Coordonnées de départ et d'arrivée</td></tr>
+<tr><td>Géoplateforme de l'IGN (data.geopf.fr)</td><td>Recherche d'adresse, temps de trajet, zones à 5, 10 et 15 min à pied, Plan IGN et photo aérienne</td><td>Texte saisi, coordonnées</td></tr>
+<tr><td>OpenFreeMap</td><td>Fonds de carte</td><td>Zone affichée</td></tr>
 <tr><td>Géorisques (État français)</td><td>Risques naturels et technologiques</td><td>Coordonnées</td></tr>
 <tr><td>DVF via l'API du Cerema</td><td>Prix des ventes immobilières</td><td>Coordonnées</td></tr>
-<tr><td>OpenFreeMap, OpenStreetMap, Esri</td><td>Fonds de carte</td><td>Zone affichée</td></tr>
-<tr><td>Google Fonts, unpkg</td><td>Police d'écriture et bibliothèques de carte (version web)</td><td>Requête technique</td></tr>
-<tr><td>GitHub Pages</td><td>Hébergement du site et des fréquences de transport</td><td>Requête technique</td></tr>
+<tr><td>Photon (Komoot), en secours seulement</td><td>Recherche d'adresse si la Géoplateforme ne trouve rien (adresse hors de France)</td><td>Texte saisi</td></tr>
+<tr><td>API Overpass (OpenStreetMap), en secours seulement</td><td>Commerces et services si les données de CheckMap ne couvrent pas la zone, lignes de transport hors réseaux suivis</td><td>Coordonnées et rayon</td></tr>
+<tr><td>GitHub Pages</td><td>Hébergement du site, des commerces et services pré-calculés et des fréquences de transport</td><td>Zone analysée (fichiers par secteur), requête technique</td></tr>
 </table>
 <p>Ces services ont leur propre politique de confidentialité. Nous n'avons pas de contrat de partage de données avec eux et ne recevons rien en retour.</p>
 </section>

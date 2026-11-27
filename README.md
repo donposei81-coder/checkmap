@@ -28,18 +28,19 @@ En ligne : https://donposei81-coder.github.io/checkmap/
 - Comparaison A / B, lien partageable, assistant qui comprend des phrases en français.
 
 ## Styles de carte (bouton calques, le choix est retenu)
-- **Lagon** (par défaut) : plan vectoriel clair, eau turquoise, plages, accents rose et sarcelle. Tuiles OpenFreeMap rendues avec MapLibre GL, chargé seulement quand ce style est affiché. Si WebGL ou les tuiles ne répondent pas, l'appli passe automatiquement au style suivant.
-- **Soleil**, **Néon nuit** : plans Esri recolorés.
-- Plans classiques : OpenStreetMap (uniquement en http/https, car les serveurs OSM refusent les pages ouvertes en fichier local), Esri, OSM France, Humanitaire.
+- **Lagon** (par défaut), **Soleil (jour)** et **Néon nuit** : styles vectoriels maison (une palette chacun) sur les tuiles OpenFreeMap, rendus avec MapLibre GL.
+- **Plan classique** et **Plan épuré** : styles Liberty et Positron d'OpenFreeMap.
+- **Plan IGN** et **Photo aérienne (IGN)** : tuiles images de la Géoplateforme (France et outre-mer). Elles servent aussi de secours : si WebGL ou les tuiles OpenFreeMap ne répondent pas, l'appli passe directement au Plan IGN.
 
-## Services utilisés (gratuits, sans clé)
-- Lieux : tuiles pré-calculées chaque semaine depuis les extraits OpenStreetMap de Geofabrik (`outils/lieux`), publiées avec l'appli : réponse en une ou deux secondes, sans dépendre d'un serveur public. En secours (tuiles absentes ou zone vide) : API Overpass, 5 serveurs (OpenStreetMap France en premier). Une seule requête par zone, au format CSV (huit fois plus léger que le JSON), puis filtrage dans l'appli ; si un serveur tarde plus de 6 s, le suivant est interrogé en parallèle, et au bout de 50 s l'appli affiche un message avec un bouton « Réessayer ». Résultats gardés 24 h.
-- Adresses : Photon (autocomplétion), Nominatim en secours.
-- Temps de trajet : OSRM (serveurs FOSSGIS). Zones de marche : Valhalla (FOSSGIS).
-- Fréquence des transports : horaires GTFS de transport.data.gouv.fr, pré-calculés en fichiers statiques (`outils/frequences`).
+## Services utilisés (sans clé, utilisables dans une appli commerciale)
+- Bibliothèques (Leaflet, Leaflet.markercluster, MapLibre GL, jsPDF) et police Overpass : copiées dans `lib/` avec leurs licences, servies avec l'appli et embarquées dans l'appli iOS. Aucun CDN.
+- Lieux : tuiles pré-calculées chaque semaine depuis les extraits OpenStreetMap de Geofabrik (`outils/lieux`), publiées avec l'appli : réponse en une ou deux secondes, sans dépendre d'un serveur public. En secours seulement (tuiles absentes ou zone vide, par exemple hors de France) : API Overpass, 5 serveurs. Une seule requête par zone, au format CSV, puis filtrage dans l'appli ; si un serveur tarde plus de 6 s, le suivant est interrogé en parallèle, et au bout de 50 s l'appli affiche un message avec un bouton « Réessayer ». Résultats gardés 24 h.
+- Adresses (recherche, suggestions, adresse d'un point) : Géoplateforme de l'IGN (`data.geopf.fr/geocodage`, adresses BAN et points d'intérêt), Licence Ouverte. Les résultats proches du point en cours passent devant. Photon n'est appelé qu'en secours, quand la Géoplateforme ne répond pas ou ne trouve rien (adresse hors de France).
+- Temps de trajet : itinéraires de la Géoplateforme (`bdtopo-osrm`, réseau BD TOPO). Marche à 5 km/h et vélo à 15 km/h sur l'itinéraire piéton, voiture hors trafic. Zones de marche 5, 10 et 15 min : isochrones de la Géoplateforme (`bdtopo-valhalla`, distance parcourue à 5 km/h).
+- Fréquence des transports : horaires GTFS de transport.data.gouv.fr, pré-calculés en fichiers statiques (`outils/frequences`). Sans fichier de fréquence pour la zone, les lignes viennent d'Overpass.
 - Risques : API Géorisques. Prix : DVF via l'API du Cerema (URL de préproduction `apidf-preprod.cerema.fr`, à surveiller ; DVF ne couvre pas l'Alsace, la Moselle et Mayotte).
-- Fonds de carte : OpenFreeMap (usage commercial autorisé, sans clé), Esri, OpenStreetMap. Les mentions © restent affichées en bas de la carte.
-- Pour un usage public à fort trafic, prévoir des serveurs Photon / OSRM dédiés ou un fournisseur payant : les serveurs publics limitent le nombre de requêtes.
+- Fonds de carte : OpenFreeMap (usage commercial autorisé, sans clé) et IGN (Licence Ouverte). Les mentions © restent affichées en bas de la carte.
+- La Géoplateforme et OpenFreeMap n'ont pas de quota par appli ; la Géoplateforme limite le débit par adresse IP, donc par téléphone.
 
 ## Score sur 100
 Chaque catégorie cochée a un poids (ex. transports 3, supermarchés 3, pharmacies 2,5, toilettes 0,5), une distance idéale et un nombre de lieux visé.

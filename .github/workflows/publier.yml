@@ -7,7 +7,7 @@ name: Publier CheckMap
 on:
   push:
     branches: [main]
-    paths: ['*.html', '*.webmanifest', 'sw.js', 'icon*', '.github/workflows/publier.yml']
+    paths: ['*.html', '*.webmanifest', 'sw.js', 'icon*', 'lib/**', '.github/workflows/publier.yml']
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
@@ -102,7 +102,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
       - name: Appli web
-        run: cp *.html manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png site/
+        run: cp -r *.html manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png lib site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

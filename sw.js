@@ -1,8 +1,9 @@
 /* CheckMap — service worker : appli hors ligne et cache des tuiles */
-const SHELL = 'checkmap-shell-v5', TILES = 'checkmap-tiles-v2', MAX_TILES = 800;
+const SHELL = 'checkmap-shell-v6', TILES = 'checkmap-tiles-v3', MAX_TILES = 800;
 const PRECACHE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
+  './lib/leaflet/leaflet.css', './lib/leaflet/leaflet.js', './lib/leaflet/MarkerCluster.css', './lib/leaflet/leaflet.markercluster.js',
+  './lib/maplibre/maplibre-gl.css', './lib/maplibre/maplibre-gl.js', './lib/maplibre/leaflet-maplibre-gl.js',
+  './lib/fonts/overpass-latin-400-normal.woff2', './lib/fonts/overpass-latin-600-normal.woff2', './lib/fonts/overpass-latin-800-normal.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => Promise.allSettled(PRECACHE.map(u => c.add(u)))).then(() => self.skipWaiting()));
@@ -19,9 +20,9 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // API : toujours le réseau
-  if (/overpass|photon\.komoot|nominatim|georisques|cerema|routing\.openstreetmap|valhalla|api\.gouv/.test(url.host) || /\/(freq|lieux)\//.test(url.pathname)) return;
+  if (/overpass|photon\.komoot|georisques|cerema|api\.gouv/.test(url.host) || (url.host === 'data.geopf.fr' && !url.pathname.startsWith('/wmts')) || /\/(freq|lieux)\//.test(url.pathname)) return;
   // Tuiles, polices et style de carte : cache d'abord, mise à jour en arrière-plan
-  if (/tile\.openstreetmap\.(org|fr)|arcgisonline\.com|tiles\.openfreemap\.org/.test(url.host)) {
+  if (url.host === 'tiles.openfreemap.org' || url.host === 'data.geopf.fr') {
     e.respondWith(caches.open(TILES).then(async c => {
       const hit = await c.match(req);
       const net = fetch(req).then(r => { if (r.ok || r.type === 'opaque') { c.put(req, r.clone()); trim(); } return r; }).catch(() => hit);
@@ -38,7 +39,7 @@ self.addEventListener('fetch', e => {
   }
   // Bibliothèques, polices, icônes : cache d'abord
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
-    if (r.ok && (url.origin === location.origin || /unpkg\.com|fonts\.(googleapis|gstatic)\.com/.test(url.host))) {
+    if (r.ok && url.origin === location.origin) {
       const copy = r.clone(); caches.open(SHELL).then(c => c.put(req, copy));
     }
     return r;
