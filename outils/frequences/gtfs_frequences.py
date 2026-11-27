@@ -273,9 +273,11 @@ def process(path, forced_day=None):
             cur[3], cur[4] = min(cur[3], v[3]), max(cur[4], v[4])
             cur[5], cur[6], cur[7] = max(cur[5], v[5]), min(cur[6], v[6]), max(cur[7], v[7])
     def first_last(v):
-        # Ligne de jour avec quelques passages notés entre 0 h et 3 h : ce sont des fins de soirée
+        # Ligne de jour avec quelques passages notés entre 0 h et 3 h : premier départ après 3 h.
+        # Si le réseau note aussi « 24:15 », ces passages sont la fin de la nuit précédente (dernier = 24:15) ;
+        # sinon ce sont les fins de soirée de ce jour-là, notées « 00:15 » au lieu de « 24:15 ».
         if v[6] < 10 ** 6 and v[5] < 0.25 * v[0]:
-            return v[6], v[7]
+            return v[6], (v[4] if v[4] >= 1440 else v[7])
         return v[3], v[4]
 
     stations = []
