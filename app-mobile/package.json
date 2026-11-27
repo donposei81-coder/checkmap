@@ -1,0 +1,19 @@
+{
+  "name": "checkmap-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "web": "node copier-web.js",
+    "ios": "node copier-web.js && npx cap sync ios && npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.6.3",
+    "@capacitor/ios": "^8.6.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/geolocation": "^8.2.5",
+    "@capacitor/share": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.3"
+  }
+}

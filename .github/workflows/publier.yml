@@ -1,0 +1,54 @@
+# Publie l'appli web et les fréquences des transports sur GitHub Pages.
+# Chaque lundi à 4 h (heure de Paris), et à la demande : onglet Actions > Publier CheckMap > Run workflow.
+name: Publier CheckMap
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      cherche:
+        description: 'Réseaux à calculer, mots séparés par des virgules (vide : toute la France)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fréquences des transports
+        env:
+          CHERCHE: ${{ inputs.cherche }}
+        run: |
+          if [ -n "$CHERCHE" ]; then QUI=(--cherche "$CHERCHE"); else QUI=(--tout); fi
+          python outils/frequences/gtfs_frequences.py "${QUI[@]}" --sortie site/freq --cache /tmp/gtfs --efface
+      - name: Appli web
+        run: cp index.html manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

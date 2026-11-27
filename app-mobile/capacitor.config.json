@@ -1,0 +1,9 @@
+{
+  "appId": "com.checkmap.app",
+  "appName": "CheckMap",
+  "webDir": "www",
+  "backgroundColor": "#f7f9fb",
+  "ios": {
+    "contentInset": "never"
+  }
+}

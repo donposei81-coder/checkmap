@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CheckMap</title>
+<meta name="description" content="CheckMap : évaluez l'attractivité et la praticité d'un quartier (commerces, santé, écoles, transports) avec un score sur 100 et le temps de marche.">
+<meta name="theme-color" content="#14afd0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<style>
+/* CheckMap */
+:root{
+  --land:#fbfbf2;--panel:#fbfbf2;--ink:#13242e;--mute:#56666d;--line:#dedccb;--soft:#f0efe2;
+  --sea:#bfe3ee;--brown:#a8551b;--mag:#d6127e;--mag-ink:#b00e67;
+  --sh:0 12px 34px rgba(19,36,46,.20);--r:16px;--peek:184px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--panel:#0f2430;--land:#0d1c24;--ink:#e9efe8;--mute:#9db1b7;--line:#244452;--soft:#163341;--brown:#e39a62;--mag-ink:#ff5aa8;color-scheme:dark}
+}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--land);color:var(--ink);font:16px/1.5 Overpass,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--mag);outline-offset:2px}
+#map{position:fixed;inset:0;background:var(--sea)}
+.leaflet-container{font:inherit}
+.leaflet-top{top:env(safe-area-inset-top)}
+
+/* Panneau légende */
+#panel{position:fixed;z-index:1000;top:14px;left:14px;bottom:14px;width:384px;display:flex;flex-direction:column;background:var(--panel);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--line);overflow:hidden}
+.grab{display:none}
+.progress{position:absolute;top:0;left:0;right:0;height:3px;overflow:hidden;opacity:0;transition:opacity .2s}
+.progress.on{opacity:1}
+.progress::after{content:"";position:absolute;top:0;bottom:0;width:40%;background:var(--mag);animation:slide 1.1s ease-in-out infinite}
+@keyframes slide{from{left:-40%}to{left:100%}}
+.brand{display:flex;align-items:center;gap:10px;padding:16px 18px 6px}
+.brand svg{flex:none}
+.brand h1{font-size:24px;line-height:1;margin:0;font-weight:800;letter-spacing:-.01em}
+.brand .tag{font-size:13px;color:var(--mute);margin-top:2px}
+.mini{margin-left:auto;display:none;font-weight:800;font-size:20px;color:var(--mag-ink);white-space:nowrap}
+.mini small{font-size:13px;color:var(--mute);font-weight:600}
+.search{position:relative;display:flex;gap:8px;padding:8px 18px 10px}
+.search input{flex:1;height:46px;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;background:var(--land);font-size:16px}
+.search input:focus{border-color:var(--ink);outline:none}
+.ibtn{flex:none;width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--land);display:grid;place-items:center}
+.ibtn:hover{border-color:var(--ink)}
+#sugg{position:absolute;z-index:5;left:18px;right:72px;top:58px;margin:0;padding:6px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);max-height:320px;overflow:auto}
+#sugg li{padding:9px 10px;border-radius:8px;cursor:pointer;line-height:1.3}
+#sugg li small{display:block;color:var(--mute);font-size:13px}
+#sugg li[aria-selected=true],#sugg li:hover{background:var(--soft)}
+.body{flex:1;overflow:auto;padding:0 18px 18px;overscroll-behavior:contain}
+.lbl{font-size:13px;color:var(--mute);font-weight:600;margin:14px 0 6px}
+#placeLabel{font-weight:600;line-height:1.3}
+.hint{font-size:13px;color:var(--mute)}
+.seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.seg.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.seg button{min-height:48px;border:1.5px solid var(--line);background:var(--land);border-radius:10px;padding:4px 2px;line-height:1.15;font-weight:700;font-size:15px}
+.seg button small{display:block;font-weight:400;font-size:13px;color:var(--mute)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.seg button[aria-pressed=true] small{color:inherit;opacity:.8}
+
+.scorebox{display:grid;grid-template-columns:92px 1fr;gap:14px;align-items:center;margin-top:16px;padding:14px;border-radius:14px;background:var(--soft)}
+.ring{position:relative;width:92px;height:92px}
+.ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ring .v{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;font-weight:800;line-height:1}
+.ring .v small{display:block;font-size:13px;color:var(--mute);font-weight:600;text-align:center}
+#arc{transition:stroke-dashoffset .6s ease}
+.scorebox b{font-size:19px;display:block;line-height:1.2}
+.scorebox p{margin:4px 0 0;font-size:14px;color:var(--mute);line-height:1.35}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:36px;border:1.5px solid var(--line);background:var(--land);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:600}
+.chip[aria-pressed=true]{border-color:var(--mag);color:var(--mag-ink);background:color-mix(in srgb,var(--mag) 9%,var(--land))}
+
+.uni{margin-top:16px}
+.uni h2{display:flex;align-items:center;gap:8px;font-size:15px;margin:0 0 4px;font-weight:800}
+.uni h2 label{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1}
+.cat{display:grid;grid-template-columns:24px 18px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:44px;padding:4px 0;border-top:1px solid var(--line)}
+.cat input,.uni input{width:18px;height:18px;accent-color:var(--ink);margin:0}
+.cat .nm{background:none;border:0;padding:0;text-align:left;font-weight:600;font-size:15px;line-height:1.25}
+.cat .nm:disabled{cursor:default}
+.cat .meta{font-size:13px;color:var(--mute);text-align:right;white-space:nowrap;line-height:1.25}
+.cat .meta b{color:var(--ink);font-size:14px}
+.cat .bar{grid-column:3/5;height:3px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:-2px}
+.cat .bar i{display:block;height:100%;background:var(--c)}
+.cat.off .nm,.cat.off .meta{opacity:.5}
+.cat.off .bar{display:none}
+
+.cmp{margin-top:16px;padding:14px;border-radius:14px;border:1.5px dashed var(--brown)}
+.cmp h3{margin:0 0 8px;font-size:15px}
+.cmp table{width:100%;border-collapse:collapse;font-size:14px}
+.cmp th,.cmp td{padding:6px 4px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+.cmp th:first-child,.cmp td:first-child{text-align:left;white-space:normal}
+.cmp thead th{border-top:0;font-size:13px;color:var(--mute)}
+.cmp .win{color:var(--mag-ink);font-weight:800}
+.cmp .tot td{font-weight:800;font-size:16px}
+.cmp .btns{display:flex;gap:8px;margin-top:10px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.btn{min-height:46px;border-radius:12px;border:1.5px solid var(--ink);background:var(--land);font-weight:700;font-size:15px;padding:6px 10px}
+.btn.dark{background:var(--ink);color:var(--panel)}
+.btn.sm{min-height:38px;font-size:14px;border-width:1px}
+.credits{font-size:13px;color:var(--mute);margin-top:16px;line-height:1.4}
+.credits a{color:inherit}
+
+/* Repères en croix */
+.xm svg{display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.cl{display:grid;place-items:center;border-radius:50%;background:#13242e;color:#fff;font:800 13px/1 Overpass,system-ui,sans-serif;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.pin{filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+.pop{min-width:190px;font-family:Overpass,system-ui,sans-serif}
+.pop .pt{display:flex;gap:6px;align-items:center;font-size:13px;color:#56666d;font-weight:600}
+.pop b{display:block;font-size:16px;margin:4px 0 0;color:#13242e;line-height:1.25}
+.pop .ps{font-size:13px;color:#56666d}
+.pop .pd{margin-top:6px;font-weight:700;color:#13242e}
+.pop a{display:inline-block;margin-top:6px;color:#b00e67;font-weight:700}
+
+/* États */
+.status{position:fixed;z-index:1001;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 16px;border-radius:999px;font-size:14px;font-weight:600;box-shadow:var(--sh);display:flex;gap:10px;align-items:center;margin-left:200px}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.err{position:fixed;z-index:1002;top:64px;left:50%;transform:translateX(-50%);margin-left:200px;width:min(440px,calc(100vw - 32px));background:#fff4ec;color:#5a2a08;border:1.5px solid var(--brown);padding:12px 14px;border-radius:14px;box-shadow:var(--sh);display:flex;gap:10px;align-items:center;font-size:14px;line-height:1.35}
+.err span{flex:1}
+.err .btn{border-color:#5a2a08;background:#fff;color:#5a2a08;min-height:40px;flex:none}
+.toast{position:fixed;z-index:3000;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;transition:.25s;pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+[hidden]{display:none!important}
+
+/* Bulle assistant */
+#fab{position:fixed;z-index:1500;right:18px;bottom:36px;height:58px;padding:0 20px 0 16px;border-radius:999px;border:0;background:var(--mag);color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px;box-shadow:0 10px 26px rgba(214,18,126,.45)}
+#fab:hover{filter:brightness(1.06)}
+#chat{position:fixed;z-index:2000;right:18px;bottom:36px;width:min(410px,calc(100vw - 36px));height:min(600px,calc(100vh - 72px));display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh);overflow:hidden}
+#chat header{display:flex;align-items:center;gap:10px;padding:14px 12px 12px 16px;background:var(--ink);color:var(--panel)}
+#chat header b{font-size:16px;line-height:1.2;display:block}
+#chat header small{font-size:13px;opacity:.75;display:block}
+#chat header div{flex:1}
+#chat header button{width:44px;height:44px;border-radius:10px;border:0;background:transparent;color:inherit;font-size:24px;line-height:1}
+#msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.m{max-width:92%;padding:10px 13px;border-radius:14px;font-size:15px;line-height:1.4}
+.m.u{align-self:flex-end;background:var(--ink);color:var(--panel);border-bottom-right-radius:4px}
+.m.b{align-self:flex-start;background:var(--soft);border-bottom-left-radius:4px}
+.m.b p{margin:0 0 6px}
+.m.b p:last-child{margin:0}
+.m .tags{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.m .tags span{font-size:13px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.bilan{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.bilan .hd{display:flex;align-items:baseline;gap:8px}
+.bilan .hd strong{font-size:30px;line-height:1;color:var(--mag-ink);font-weight:800}
+.bilan ul{list-style:none;margin:8px 0 0;padding:0}
+.bilan li{display:grid;grid-template-columns:12px minmax(0,1fr);gap:8px;align-items:start;padding:4px 0;font-size:14px;line-height:1.3}
+.bilan li i{width:10px;height:10px;border-radius:3px;margin-top:4px;background:var(--c)}
+.bilan li span{color:var(--mute)}
+.bilan ul.tl li{display:block;padding:2px 0}
+.typing span{display:inline-block;width:7px;height:7px;margin-right:4px;border-radius:50%;background:var(--mute);animation:blink 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes blink{50%{opacity:.25}}
+.sugs{display:flex;gap:6px;overflow-x:auto;padding:0 14px 8px;scrollbar-width:none}
+.sugs button{flex:none;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:36px;border:1.5px solid var(--line);background:var(--land);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+#chatForm{display:flex;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--line)}
+#ask{flex:1;min-height:46px;max-height:120px;resize:none;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--land);font-size:16px;line-height:1.3}
+#ask:focus{outline:none;border-color:var(--ink)}
+#chatForm button{flex:none;width:52px;border-radius:12px;border:0;background:var(--mag);color:#fff;display:grid;place-items:center}
+
+.libb{margin-left:8px;width:42px;height:42px}
+.card{margin-top:16px;padding:14px;border-radius:14px;border:1.5px solid var(--line);background:var(--land)}
+.card-h{display:flex;align-items:center;gap:8px}
+.card h2{font-size:16px;margin:0;flex:1;font-weight:800}
+.card h3{font-size:14px;margin:14px 0 6px;color:var(--mute);font-weight:700}
+.card h3:first-child{margin-top:8px}
+.link{border:0;background:none;color:var(--mag-ink);font-weight:800;font-size:15px;min-height:40px;padding:0 4px}
+.pform{display:grid;gap:8px;margin-top:8px}
+.pform input{height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;background:var(--panel);font-size:16px}
+.pform .row{display:flex;gap:8px;justify-content:flex-end}
+.trip{display:grid;grid-template-columns:32px minmax(0,1fr) 36px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.trip:first-child{border-top:0}
+.tk,.mp span{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--k);color:#fff;font-weight:800;font-size:15px}
+.mp span{border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.tm b{font-size:15px}
+.tt{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:13px;color:var(--mute)}
+.tt b{color:var(--ink);font-size:14px}
+.x{width:36px;height:36px;border:0;background:none;color:var(--mute);font-size:22px;border-radius:8px}
+.x:hover{background:var(--soft)}
+.risks{list-style:none;margin:0;padding:0}
+.risks li{display:grid;grid-template-columns:78px minmax(0,1fr);gap:2px 10px;padding:6px 0;border-top:1px solid var(--line);font-size:14px;line-height:1.3}
+.risks li:first-child{border-top:0}
+.risks small{grid-column:2;color:var(--mute);font-size:13px}
+.lv{grid-row:span 2;align-self:start;text-align:center;font-size:12px;font-weight:800;border-radius:6px;padding:3px 0}
+.l4{background:#ffe6cc;color:#a2470a}.l0{background:#e8f5ec;color:#1f7a3f}.l1{background:#fff6d6;color:#8a6400}.l2{background:#ffe6cc;color:#a2470a}.l3{background:#ffdcdc;color:#b3121f}
+.more{display:inline-block;margin-top:6px;font-weight:700;color:var(--mag-ink);font-size:14px}
+.pr{display:grid;grid-template-columns:1fr auto;gap:0 10px;padding:4px 0}
+.pr b{font-size:17px;text-align:right}
+.pr small{grid-column:2;text-align:right;color:var(--mute);font-size:13px}
+.ln{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;padding:4px 0;font-size:14px}
+.lm{font-weight:800;font-size:13px;text-align:center;border-radius:6px;background:var(--soft);padding:2px 0;align-self:start}
+.ln small{display:block;color:var(--mute);font-size:12px}
+.fq{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:2px 0 6px}.fq b{font-size:15px}.fq small{color:var(--mute);font-size:12px}
+.spin.sm{display:inline-block;width:12px;height:12px;border-width:2px;vertical-align:-1px;color:var(--mute)}
+#q15{margin-top:10px}
+.q15b{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--soft);font-size:14px;line-height:1.3}
+.q15b strong{font-size:24px;font-weight:800;color:var(--cyan,#0077b6);white-space:nowrap}
+.q15b small{color:var(--mute);font-size:13px}
+.q15b.top{background:linear-gradient(90deg,rgba(0,168,198,.14),rgba(255,122,26,.14))}
+.tog{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;min-height:36px;cursor:pointer}
+.tog input{width:18px;height:18px;accent-color:var(--mag)}
+.actions .btn[aria-pressed=true]{border-color:var(--mag);color:var(--mag-ink)}
+.sheet{position:fixed;z-index:2000;right:18px;bottom:36px;width:min(430px,calc(100vw - 36px));height:min(660px,calc(100vh - 72px));display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh);overflow:hidden}
+.sheet header{display:flex;align-items:center;gap:10px;padding:14px 12px 12px 16px;background:var(--ink);color:var(--panel)}
+.sheet header div{flex:1}.sheet header b{display:block;font-size:16px}.sheet header small{font-size:13px;opacity:.8}
+.sheet header button{width:44px;height:44px;border:0;background:none;color:inherit;font-size:24px}
+.tabs{display:flex;gap:6px;padding:10px 14px 0}
+.tabs button{flex:1;min-height:40px;border:1.5px solid var(--line);background:var(--land);border-radius:10px;font-weight:700}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.lbody{flex:1;overflow:auto;padding:10px 14px 16px}
+.li{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:10px 2px;min-height:56px}
+.li:first-child{border-top:0}
+.li b{display:block;font-size:15px;line-height:1.25}.li small{color:var(--mute);font-size:13px}
+.sb{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--soft);font-weight:800;color:var(--mag-ink)}
+.back{border:0;background:none;color:var(--mag-ink);font-weight:800;min-height:40px;padding:0}
+.fh{margin:4px 0 2px;font-size:18px;line-height:1.25}
+.lbody textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--land);font-size:16px;resize:vertical}
+.photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.photos figure{position:relative;margin:0;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--soft)}
+.photos img{width:100%;height:100%;object-fit:cover;display:block}
+.photos .x{position:absolute;top:4px;right:4px;width:30px;height:30px;background:rgba(0,0,0,.55);color:#fff;font-size:18px}
+.addph{display:grid;place-items:center;aspect-ratio:1;border-radius:10px;border:2px dashed var(--line);color:var(--mute);font-weight:800;cursor:pointer}
+.dlg{position:fixed;inset:0;z-index:3000;background:rgba(18,38,58,.55);display:grid;place-items:center;padding:16px}
+.dlgc{width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border-radius:18px;padding:14px;box-shadow:var(--sh)}
+.dlgh{display:flex;align-items:center}.dlgh b{flex:1;font-size:17px}
+.dlgh button{width:44px;height:44px;border:0;background:none;font-size:24px;color:var(--ink)}
+#bilanPrev{margin-top:6px;min-height:120px;display:grid;place-items:center}
+#bilanPrev img{width:100%;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.15)}
+
+/* Thème Néon nuit */
+#arc{stroke:var(--mag)}
+#sky{position:fixed;inset:0;z-index:1;pointer-events:none;display:none;mix-blend-mode:soft-light;opacity:.85;background:linear-gradient(180deg,#3b1d8f 0%,#ff2bd6 55%,#ff8a3d 100%)}
+.neon-base{filter:grayscale(1) brightness(1.1) contrast(3) sepia(1) hue-rotate(255deg) saturate(5)}
+.neon-labels{filter:grayscale(1) sepia(1) hue-rotate(150deg) saturate(4) brightness(1.35)}
+body.neon{--panel:#130a26;--land:#1b1036;--ink:#f6edff;--mute:#b9a7dc;--line:#3b2869;--soft:#21134a;--mag:#ff2bd6;--mag-ink:#ff6be6;--brown:#ff9a4d;--cyan:#2ee6ff;color-scheme:dark}
+body.neon #map{background:#07020f}
+body.neon #sky{display:block}
+body.neon #panel{border-color:#3b2869;box-shadow:0 0 0 1px rgba(255,43,214,.3),0 0 42px rgba(120,40,255,.4)}
+body.neon .brand h1{background:linear-gradient(90deg,#ff2bd6,#ff9a4d);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.neon .ring .v{text-shadow:0 0 14px rgba(255,43,214,.7)}
+body.neon #arc{filter:drop-shadow(0 0 5px #ff2bd6)}
+body.neon .seg button[aria-pressed=true]{background:var(--mag);border-color:var(--mag);color:#fff;box-shadow:0 0 14px rgba(255,43,214,.55)}
+body.neon .chip[aria-pressed=true]{border-color:var(--cyan);color:var(--cyan);background:rgba(46,230,255,.08);box-shadow:0 0 10px rgba(46,230,255,.3)}
+body.neon .cat input,body.neon .uni input{accent-color:#ff2bd6}
+body.neon .search input:focus,body.neon #ask:focus{border-color:var(--cyan)}
+body.neon .btn.dark{background:var(--mag);border-color:var(--mag);color:#fff}
+body.neon .btn{border-color:#6b4fb0}
+body.neon .cmp{border-color:var(--cyan)}
+body.neon #fab{background:linear-gradient(135deg,#ff2bd6,#ff8a3d);box-shadow:0 0 26px rgba(255,43,214,.65)}
+body.neon #chat{border-color:#3b2869;box-shadow:0 0 40px rgba(120,40,255,.45)}
+body.neon #chat header{background:linear-gradient(90deg,#2a0f5c,#6a1580);color:#fff}
+body.neon .m.u{background:linear-gradient(135deg,#ff2bd6,#9b3cff);color:#fff}
+body.neon #chatForm button{background:linear-gradient(135deg,#ff2bd6,#ff8a3d)}
+body.neon .xm svg{filter:drop-shadow(0 0 3px rgba(255,255,255,.7)) drop-shadow(0 0 8px rgba(46,230,255,.45))}
+body.neon .cl{background:#160a30;border-color:#2ee6ff;box-shadow:0 0 12px rgba(46,230,255,.8)}
+body.neon .pin{filter:drop-shadow(0 0 8px rgba(255,43,214,.95))}
+body.neon .leaflet-popup-content-wrapper,body.neon .leaflet-popup-tip{background:#1a0f33;color:#f6edff;box-shadow:0 0 18px rgba(255,43,214,.5)}
+body.neon .pop b,body.neon .pop .pd{color:#f6edff}
+body.neon .pop .pt,body.neon .pop .ps{color:#b9a7dc}
+body.neon .pop a{color:#2ee6ff}
+body.neon .leaflet-popup-close-button{color:#b9a7dc}
+body.neon .leaflet-bar a,body.neon .leaflet-control-layers{background:#1a0f33;color:#f6edff;border-color:#3b2869}
+body.neon .leaflet-control-layers-toggle{filter:invert(1) hue-rotate(180deg)}
+body.neon .leaflet-control-attribution{background:rgba(19,10,38,.8);color:#b9a7dc}
+body.neon .leaflet-control-attribution a{color:#2ee6ff}
+
+/* Thème Soleil */
+.sun-base{filter:saturate(1.9) hue-rotate(-4deg) contrast(1.1) brightness(1.06)}
+body.sun{--panel:#fffaf0;--land:#ffffff;--ink:#12263a;--mute:#5d6b78;--line:#f0dfc4;--soft:#fff1dc;--mag:#ff4f7b;--mag-ink:#e0245e;--brown:#ff7a1a;--cyan:#00a8c6;color-scheme:light}
+body.sun #map{background:#bfeff5}
+body.sun #sky{display:block;opacity:1;background:linear-gradient(160deg,rgba(0,200,255,.5),rgba(255,170,60,.45))}
+body.sun #panel{border-color:#f3d9b1;box-shadow:0 14px 40px rgba(255,122,26,.22)}
+body.sun .brand h1{background:linear-gradient(90deg,#ff7a1a,#ff2d7a);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.sun .seg button[aria-pressed=true]{background:linear-gradient(135deg,#00b8d4,#0088c2);border-color:#00a8c6;color:#fff}
+body.sun .chip[aria-pressed=true]{border-color:#ff7a1a;color:#c2410c;background:#fff0e0}
+body.sun .cat input,body.sun .uni input{accent-color:#ff7a1a}
+body.sun .search input:focus,body.sun #ask:focus{border-color:#00a8c6}
+body.sun .btn.dark{background:linear-gradient(135deg,#ff7a1a,#ff2d7a);border-color:transparent;color:#fff}
+body.sun .cmp{border-color:#00a8c6}
+body.sun #fab{background:linear-gradient(135deg,#ff7a1a,#ff2d7a);box-shadow:0 10px 26px rgba(255,90,60,.5)}
+body.sun .sheet header,body.sun #chat header{background:linear-gradient(90deg,#00a8c6,#0077b6);color:#fff}
+body.sun .m.u{background:linear-gradient(135deg,#ff7a1a,#ff2d7a);color:#fff}
+body.sun #chatForm button{background:linear-gradient(135deg,#ff7a1a,#ff2d7a)}
+body.sun #arc{stroke:url(#gsun)}
+body.sun .ring .v{color:#12263a}
+body.sun .cl{background:#00a8c6;border-color:#fff;box-shadow:0 2px 8px rgba(0,90,120,.45)}
+
+/* Thème Lagon (par défaut) */
+body.lagon{--panel:#f7f9fb;--land:#ffffff;--ink:#1b2a3a;--mute:#607184;--line:#dbe3ea;--soft:#edf2f6;--mag:#ff3d8b;--mag-ink:#e0266f;--brown:#ff7a59;--cyan:#12b3c4;color-scheme:light}
+body.lagon #map{background:#d4dce3}
+body.lagon #panel{border-color:#dbe3ea;box-shadow:0 14px 40px rgba(27,60,90,.18)}
+body.lagon .brand h1{background:linear-gradient(90deg,#ff3d8b,#12b3c4);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.lagon .seg button[aria-pressed=true]{background:linear-gradient(135deg,#1fc9b5,#14afd0);border-color:#14afd0;color:#fff}
+body.lagon .chip[aria-pressed=true]{border-color:#ff3d8b;color:#d81b66;background:#fff0f6}
+body.lagon .cat input,body.lagon .uni input{accent-color:#ff3d8b}
+body.lagon .search input:focus,body.lagon #ask:focus{border-color:#14afd0}
+body.lagon .btn.dark{background:linear-gradient(135deg,#ff3d8b,#ff7a59);border-color:transparent;color:#fff}
+body.lagon .cmp{border-color:#14afd0}
+body.lagon #fab{background:linear-gradient(135deg,#ff3d8b,#ff7a59);box-shadow:0 10px 26px rgba(255,61,139,.45)}
+body.lagon .sheet header,body.lagon #chat header{background:linear-gradient(90deg,#14afd0,#1fc9b5);color:#fff}
+body.lagon .m.u{background:linear-gradient(135deg,#ff3d8b,#ff7a59);color:#fff}
+body.lagon #chatForm button{background:linear-gradient(135deg,#ff3d8b,#ff7a59)}
+body.lagon #arc{stroke:url(#glagon)}
+body.lagon .cl{background:#12b3c4;border-color:#fff;box-shadow:0 2px 8px rgba(10,80,110,.4)}
+body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3ea}
+.ringpin b{position:absolute;left:12px;top:12px;width:20px;height:20px;border-radius:50%;background:#ff3d8b;border:4px solid #fff;box-shadow:0 2px 8px rgba(20,60,90,.5)}
+.ringpin i{position:absolute;inset:0;border-radius:50%;border:3px solid #ff3d8b;opacity:0;animation:ring 2.4s ease-out infinite}
+.ringpin i+i{border-color:#14afd0;animation-delay:1.2s}
+@keyframes ring{0%{transform:scale(.3);opacity:.9}100%{transform:scale(1.3);opacity:0}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Mobile : feuille du bas */
+@media (max-width:760px){
+  #panel{top:auto;left:0;right:0;bottom:0;width:auto;height:calc(var(--peek) + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;border-bottom:0;transition:height .28s ease}
+  #panel.open{height:calc(100% - 56px - env(safe-area-inset-top))}
+  .grab{display:block;width:100%;height:22px;border:0;background:none;padding:0;flex:none}
+  .grab span{display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:9px auto 0}
+  .brand{padding:2px 16px 2px}
+  .brand .tag{display:none}
+  .mini{display:block}
+  .search{padding:8px 16px 8px}
+  #sugg{left:16px;right:70px}
+  .body{padding:0 16px calc(20px + env(safe-area-inset-bottom))}
+  .leaflet-bottom{bottom:calc(var(--peek) + env(safe-area-inset-bottom))}
+  .leaflet-control-attribution{max-width:calc(100vw - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #fab{bottom:calc(var(--peek) + 34px + env(safe-area-inset-bottom));right:12px;height:52px;padding:0 16px 0 13px;font-size:15px}
+  #panel.open ~ #fab{display:none}
+  .sheet{inset:0;width:auto;height:auto;border-radius:0;border:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+  .libb{display:none}
+  #chat{inset:0;width:auto;height:auto;border-radius:0;border:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+  .status,.err{margin-left:0;top:calc(12px + env(safe-area-inset-top))}
+  .err{top:calc(60px + env(safe-area-inset-top))}
+  .toast{bottom:calc(var(--peek) + 16px)}
+}
+</style>
+</head>
+<body>
+<div id="map" role="application" aria-label="Carte du quartier"></div>
+<div id="sky" aria-hidden="true"></div>
+
+<aside id="panel" aria-label="Analyse du quartier">
+  <div class="progress" id="progress"></div>
+  <button class="grab" id="grab" aria-label="Agrandir ou réduire le panneau"><span></span></button>
+  <header class="brand">
+    <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#13242e"/><circle cx="32" cy="32" r="19" fill="none" stroke="#bfe3ee" stroke-width="3" stroke-dasharray="5 5"/><path d="M23 23l18 18M41 23L23 41" stroke="#d6127e" stroke-width="7" stroke-linecap="round"/></svg>
+    <div><h1>CheckMap</h1><div class="tag">Le score de votre futur quartier</div></div>
+    <div class="mini" id="mini" aria-hidden="true">–<small>/100</small></div>
+    <button type="button" class="ibtn libb" id="libBtn" title="Mes adresses" aria-label="Mes adresses : favoris et historique">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+    </button>
+  </header>
+  <form class="search" id="searchForm" role="search" autocomplete="off">
+    <input id="q" type="search" placeholder="Adresse, rue, ville, lieu…" aria-label="Rechercher une adresse" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false" enterkeyhint="search">
+    <button type="button" class="ibtn" id="geoBtn" title="Me géolocaliser" aria-label="Me géolocaliser">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
+    </button>
+    <ul id="sugg" role="listbox" hidden></ul>
+  </form>
+  <div class="body" id="body">
+    <div class="lbl">Point analysé</div>
+    <div id="placeLabel">Recherche d'une position…</div>
+    <div class="hint">Cliquez sur la carte ou faites glisser le repère.</div>
+
+    <div class="lbl">Rayon de recherche (marche à 5 km/h, détours compris)</div>
+    <div class="seg" id="radii" role="group" aria-label="Rayon de recherche"></div>
+
+    <div class="scorebox" id="scoreBox" aria-live="polite">
+      <div class="ring">
+        <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true"><circle cx="46" cy="46" r="40" fill="none" stroke="var(--line)" stroke-width="9"/> <defs><linearGradient id="gsun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ff2d7a"/></linearGradient><linearGradient id="glagon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3d8b"/><stop offset="1" stop-color="#14afd0"/></linearGradient></defs><circle id="arc" cx="46" cy="46" r="40" fill="none" stroke="#d6127e" stroke-width="9" stroke-linecap="round" stroke-dasharray="251.33" stroke-dashoffset="251.33"/></svg>
+        <div class="v"><div><span id="scoreV">–</span><small>/100</small></div></div>
+      </div>
+      <div><b id="scoreL">Analyse en attente</b><p id="scoreP">Choisissez un point pour obtenir le score du quartier.</p></div>
+    </div>
+
+    <div id="q15" hidden></div>
+
+    <section class="card">
+      <div class="card-h"><h2>Mes lieux importants</h2><button type="button" class="link" id="addPlaceBtn">+ Ajouter</button></div>
+      <form id="placeForm" class="pform" hidden autocomplete="off">
+        <div class="chips" id="placeKinds"></div>
+        <input id="placeName" maxlength="40" placeholder="Nom (ex. Bureau, École de Léa)" aria-label="Nom du lieu">
+        <input id="placeAddr" required placeholder="Adresse du lieu" aria-label="Adresse du lieu">
+        <div class="row"><button type="button" class="btn sm" id="placeCancel">Annuler</button><button type="submit" class="btn sm dark">Enregistrer</button></div>
+      </form>
+      <div id="trips"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Risques, prix et transports</h2></div>
+      <div id="fiche"><p class="hint">Choisissez une adresse.</p></div>
+    </section>
+
+    <div class="lbl">Packs selon votre projet</div>
+    <div class="chips" id="packs"></div>
+
+    <div id="cats"><p class="hint" style="margin-top:16px">Chargement des lieux du quartier…</p></div>
+    <div id="compare"></div>
+
+    <div class="actions">
+      <button class="btn" id="favBtn" type="button" aria-pressed="false">☆ Enregistrer</button>
+      <button class="btn dark" id="bilanBtn" type="button">Partager le bilan</button>
+      <button class="btn" id="shareBtn" type="button">Partager le lien</button>
+      <button class="btn" id="pinBtn" type="button">Comparer…</button>
+    </div>
+    <p class="credits">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL), via Overpass API. Géocodage Photon et Nominatim. Distances à vol d'oiseau, temps de marche estimés avec 30 % de détour.</p>
+  </div>
+</aside>
+
+<div class="status" id="status" hidden><span class="spin"></span><span id="statusT">Chargement des lieux…</span></div>
+<div class="err" id="err" role="alert" hidden><span id="errMsg"></span><button class="btn sm" id="retry" type="button">Réessayer</button></div>
+<div class="toast" id="toast" role="status"></div>
+
+<button id="fab" type="button" aria-label="Ouvrir l'assistant emménagement et quartier" aria-expanded="false">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01" stroke-linecap="round" stroke-width="3"/></svg>
+  Assistant
+</button>
+<section id="chat" hidden aria-label="Assistant emménagement et quartier">
+  <header><div><b>Assistant emménagement & quartier</b><small>Décrivez votre projet en une phrase</small></div><button id="chatClose" type="button" aria-label="Fermer l'assistant">×</button></header>
+  <div id="msgs" aria-live="polite"></div>
+  <div class="sugs" id="sugs"></div>
+  <form id="chatForm"><textarea id="ask" rows="1" placeholder="Ex. : famille, 10 min à pied…" aria-label="Votre demande"></textarea><button type="submit" aria-label="Envoyer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></form>
+</section>
+
+<section id="lib" class="sheet" hidden aria-label="Mes adresses">
+  <header><div><b>Mes adresses</b><small>Disponibles même sans connexion</small></div><button id="libClose" type="button" aria-label="Fermer">×</button></header>
+  <div class="tabs" id="libTabs" role="tablist"><button type="button" role="tab" data-tab="favs" aria-selected="true">Favoris</button><button type="button" role="tab" data-tab="history" aria-selected="false">Historique</button></div>
+  <div class="lbody" id="libBody"></div>
+</section>
+
+<div id="bilanDlg" class="dlg" hidden role="dialog" aria-modal="true" aria-label="Bilan à partager">
+  <div class="dlgc">
+    <div class="dlgh"><b>Bilan à partager</b><button type="button" id="bilanClose" aria-label="Fermer">×</button></div>
+    <div id="bilanPrev"></div>
+    <div class="actions"><button type="button" class="btn dark" id="bilanShare">Partager l'image</button><button type="button" class="btn" id="bilanPdf">PDF</button></div>
+  </div>
+</div>
+
+<noscript><p style="position:fixed;inset:auto 0 0 0;z-index:9999;background:#fff;padding:16px">CheckMap a besoin de JavaScript.</p></noscript>
+
+<script>
+{
+'use strict';
+/* ============================================================
+   Données de référence : univers, catégories, packs
+   ============================================================ */
+const WALK_MPM = 5000 / 60;      // 5 km/h = 83,3 m par minute
+const DETOUR = 1.3;              // les rues ne sont pas en ligne droite
+const RADII = [500, 800, 1000, 1500];
+// Adresse des fichiers de fréquence (outils/frequences). Vide : dossier freq/ à côté de l'appli s'il existe.
+const FREQ_URL = '';
+// Adresse publique de la version web : liens partagés depuis l'appli iPhone ou un fichier local, fréquences des transports.
+const SITE_URL = 'https://donposei81-coder.github.io/checkmap/';
+const MIN_FETCH = 1000, MARGIN = 250, MAX_R = 2500;
+const walkMin = d => Math.max(1, Math.round(d * DETOUR / WALK_MPM));
+const radiusFromMin = m => clampR(m * WALK_MPM / DETOUR);
+function clampR(r){ return Math.min(MAX_R, Math.max(200, Math.round(r / 50) * 50)); }
+const fmtDist = d => d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(1).replace('.', ',') + ' km';
+
+const UNIVERS = [
+  { id:'alim',  name:'Alimentation & Commerces' },
+  { id:'sante', name:'Santé & Bien-être' },
+  { id:'vie',   name:'Vie quotidienne & Famille' },
+  { id:'mob',   name:'Mobilité & Pratique' }
+];
+// w = poids dans le score, ideal = distance (m) sous laquelle la proximité est parfaite, target = nombre de lieux pour un choix complet
+const CATS = [
+  { id:'boulangerie', u:'alim',  name:'Boulangeries',              one:'boulangerie',        color:'#d98a1c', w:2,   ideal:300, target:6 },
+  { id:'supermarche', u:'alim',  name:'Supermarchés',              one:'supermarché',        color:'#e0531f', w:3,   ideal:400, target:5 },
+  { id:'restaurant',  u:'alim',  name:'Restaurants & Cafés',       one:'restaurant ou café', color:'#a8332a', w:1.5, ideal:300, target:30 },
+  { id:'marche',      u:'alim',  name:'Marchés & Primeurs',        one:'marché ou primeur',  color:'#8a6d12', w:1,   ideal:500, target:5 },
+  { id:'medecin',     u:'sante', name:'Médecins',                  one:'médecin',            color:'#d6127e', w:2.5, ideal:500, target:8 },
+  { id:'pharmacie',   u:'sante', name:'Pharmacies',                one:'pharmacie',          color:'#14a04c', w:2.5, ideal:400, target:4 },
+  { id:'dentiste',    u:'sante', name:'Dentistes & Kinés',         one:'dentiste ou kiné',   color:'#9b36a3', w:1,   ideal:700, target:5 },
+  { id:'ecole',       u:'vie',   name:'Écoles & Crèches',          one:'école ou crèche',    color:'#2a6fdb', w:2,   ideal:500, target:6 },
+  { id:'parc',        u:'vie',   name:'Parcs & Espaces verts',     one:'parc',               color:'#4d7c2a', w:2,   ideal:300, target:6 },
+  { id:'sport',       u:'vie',   name:'Salles de sport & Piscines',one:'équipement sportif', color:'#0e8f97', w:1,   ideal:700, target:4 },
+  { id:'poste',       u:'vie',   name:'Postes & Banques',          one:'poste ou banque',    color:'#c99a00', w:1,   ideal:500, target:5 },
+  { id:'transport',   u:'mob',   name:'Transports (métro, tram, bus)', one:'arrêt de transport', color:'#1d3a8a', w:3, ideal:250, target:12 },
+  { id:'borne',       u:'mob',   name:'Bornes électriques',        one:'borne de recharge',  color:'#0098cf', w:0.5, ideal:600, target:4 },
+  { id:'velo',        u:'mob',   name:'Stations vélos',            one:'station vélos',      color:'#6b4fd8', w:1,   ideal:300, target:4 },
+  { id:'toilettes',   u:'mob',   name:'Toilettes publiques',       one:'toilettes',          color:'#6f7468', w:0.5, ideal:400, target:3 }
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+const CAT_IDX = Object.fromEntries(CATS.map((c, i) => [c.id, i]));
+const ALL_IDS = CATS.map(c => c.id);
+
+const PACKS = {
+  emmenagement:{ name:'Emménagement',        cats:['boulangerie','supermarche','restaurant','medecin','pharmacie','ecole','parc','poste','transport'] },
+  famille:     { name:'Famille',             cats:['ecole','parc','medecin','pharmacie','supermarche','boulangerie','sport','transport'] },
+  sansvoiture: { name:'Sans voiture',        cats:['transport','velo','supermarche','boulangerie','marche','pharmacie','medecin'] },
+  senior:      { name:'Senior',              cats:['medecin','pharmacie','dentiste','supermarche','boulangerie','marche','transport','parc','toilettes','poste'] },
+  etudiant:    { name:'Étudiant & jeune actif', cats:['restaurant','supermarche','transport','velo','sport','poste','boulangerie'] },
+  electrique:  { name:'Voiture électrique',  cats:['borne','supermarche','restaurant'] },
+  sportif:     { name:'Sport & bien-être',   cats:['sport','parc','dentiste','velo'] }
+};
+
+const TYPE_LABEL = {
+  bakery:'Boulangerie', pastry:'Pâtisserie', supermarket:'Supermarché', convenience:'Supérette',
+  restaurant:'Restaurant', cafe:'Café', fast_food:'Restauration rapide',
+  marketplace:'Marché', greengrocer:'Primeur', butcher:'Boucherie', cheese:'Fromagerie', seafood:'Poissonnerie', farm:'Produits fermiers',
+  doctors:'Cabinet médical', doctor:'Médecin', clinic:'Clinique', hospital:'Hôpital', pharmacy:'Pharmacie',
+  dentist:'Dentiste', physiotherapist:'Kinésithérapeute',
+  school:'École', kindergarten:'École maternelle', childcare:'Crèche',
+  park:'Parc', playground:'Aire de jeux', garden:'Jardin', fitness_centre:'Salle de sport', sports_centre:'Centre sportif', swimming_pool:'Piscine',
+  post_office:'Bureau de poste', bank:'Banque',
+  bus_stop:'Arrêt de bus', tram_stop:'Arrêt de tram', subway:'Station de métro', station:'Gare', halt:'Halte ferroviaire',
+  charging_station:'Borne de recharge', bicycle_rental:'Station vélos', toilets:'Toilettes publiques'
+};
+
+/* ============================================================
+   Assistant : analyse des phrases en local
+   ============================================================ */
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’`]/g, "'");
+
+const CAT_KW = {
+  boulangerie:/\b(boulang\w*|pains?|baguettes?|viennoiseries?|patisseries?|croissants?)\b/,
+  supermarche:/\b(supermarches?|superettes?|hypermarches?|supers? marches?|courses|epiceries?|carrefour|monoprix|franprix|lidl|intermarche|auchan|leclerc|aldi)\b/,
+  restaurant:/\b(restos?|restaurants?|restauration|cafes?|bars?|brasseries?|bistrots?|fast[- ]?foods?|manger|sorties?)\b/,
+  marche:/\b(marches?|primeurs?|fruits?|legumes?|bouchers?|boucheries?|fromageries?|poissonneries?|producteurs?)\b/,
+  medecin:/\b(medecins?|docteurs?|generalistes?|cabinets? medica\w*|cliniques?|hopita\w*|urgences?|soins|maisons? de sante|pediatres?)\b/,
+  pharmacie:/\b(pharmacies?|pharmacien\w*|medicaments?)\b/,
+  dentiste:/\b(dentistes?|dentaires?|kines?|kinesi\w*|osteo\w*|physio\w*)\b/,
+  ecole:/\b(ecoles?|creches?|colleges?|lycees?|maternelles?|primaires?|scolaires?|garderies?|scolarite)\b/,
+  parc:/\b(parcs?|jardins?|espaces? verts?|verdure|squares?|aires? de jeux|nature|promenades?)\b/,
+  sport:/\b(sports?|salles? de sport|gym\w*|piscines?|fitness|muscu\w*|natation|nager|stades?)\b/,
+  poste:/\b(postes?|banques?|bancaires?|distributeurs?|dab|courriers?|colis)\b/,
+  transport:/\b(transports?|metros?|trams?|tramways?|bus|gares?|trains?|rer|arrets?|en commun)\b/,
+  borne:/\b(bornes?|recharges?|electriques?|irve)\b/,
+  velo:/\b(velos?|velib\w*|bicyclettes?|cyclables?|v'lille|bicloo|velov)\b/,
+  toilettes:/\b(toilettes?|wc|sanitaires?)\b/
+};
+const UNI_KW = {
+  alim:/\b(alimentation|commerces?|commercants?)\b/,
+  sante:/\b(sante|bien[- ]etre)\b/,
+  vie:/\b(vie quotidienne)\b/,
+  mob:/\b(mobilite|deplacements?)\b/
+};
+// ordre : du plus précis au plus général
+const INTENT_KW = [
+  ['electrique', /\b(voitures?|vehicules?|autos?) electriques?\b|\brecharger ma voiture\b/],
+  ['sansvoiture', /\bsans (voiture|vehicule|auto|permis)\b|\bpas de (voiture|vehicule|permis)\b|\bpietons?\b|\btout a pied\b/],
+  ['famille', /\b(famille|familial\w*|enfants?|bebes?|gamins?|ados?|adolescents?|parents?)\b/],
+  ['senior', /\b(seniors?|retraites?|personnes? agees?|agee?s?|vieux|mobilite reduite|pmr|deambulateur|fauteuil roulant)\b/],
+  ['etudiant', /\b(etudiants?|jeunes? actifs?|colocs?|colocation|campus|fac|universite)\b/],
+  ['sportif', /\b(sportifs?|sportives?)\b/],
+  ['emmenagement', /\b(habiter|emmenag\w*|demenag\w*|installer|vivre|louer|location|acheter|achat|appart\w*|logements?|maison|quartier)\b/]
+];
+const ADD_RE = /\b(ajoute\w*|rajoute\w*|aussi|en plus|egalement|active\w*|coche\w*|affiche aussi)\b/;
+const REMOVE_RE = /\b(enleve\w*|retire\w*|supprime\w*|masque\w*|decoche\w*|cache\w*|desactive\w*|sans les?|sans la|sauf)\b/;
+const ONLY_RE = /\b(seulement|uniquement|juste)\b/;
+const ALL_RE = /\b(toutes? les categories|tous les lieux|tout afficher|affiche tout|tout cocher|tout voir|tout le quartier)\b/;
+const MORE_RE = /\b(etc|complet|complete|tout savoir|bilan|vue d'ensemble)\b/;
+const COMPARE_RE = /\bcompar\w*\b/;
+const GEO_RE = /\b(pres de (chez )?moi|autour de moi|ma position|ou je suis|me geolocaliser|geolocalis\w*)\b/;
+
+function extractRadius(t){
+  let m;
+  if (/\bun quart d'heure\b/.test(t)) return { r: radiusFromMin(15), min: 15 };
+  if (/\bune demi[- ]heure\b/.test(t)) return { r: radiusFromMin(30), min: 30 };
+  if ((m = t.match(/(\d+(?:[.,]\d+)?)\s*(?:min|mins|minutes?|mn)\b/))) { const v = parseFloat(m[1].replace(',', '.')); return { r: radiusFromMin(v), min: v }; }
+  if ((m = t.match(/(\d+(?:[.,]\d+)?)\s*(?:km|kilometres?)\b/))) return { r: clampR(parseFloat(m[1].replace(',', '.')) * 1000) };
+  if ((m = t.match(/(\d+)\s*(?:m|metres?)\b/))) return { r: clampR(+m[1]) };
+  return null;
+}
+const RADIUS_STRIP = /(?:a |en |dans un rayon de |a moins de |moins de )?\d+(?:[.,]\d+)?\s*(?:min|mins|minutes?|mn|km|kilometres?|m|metres?)\b|un quart d'heure|une demi[- ]heure/g;
+
+const STREET = '(?:rue|avenue|av\\.?|boulevard|bd|place|pl\\.?|all[ée]e|chemin|impasse|quai|cours|route|square|passage|faubourg|rond-point|esplanade|parvis)';
+const PREP = "(?:des\\s+|du\\s+|de\\s+|d')";
+const LEAD_RE = new RegExp(
+  "(?:pr[eè]s\\s+" + PREP + "|autour\\s+" + PREP + "|[aà]\\s+c[oô]t[eé]\\s+" + PREP + "|proche\\s+" + PREP + "|aux\\s+alentours\\s+" + PREP + "|" +
+  "(?:dans\\s+le\\s+)?quartier\\s+" + PREP + "|adresse\\s*:?\\s*|" +
+  "(?:habiter|vivre|m'installer|s'installer|emm[ée]nager|d[ée]m[ée]nager)\\s+(?:(?:[aà]|au|aux|sur|dans|vers)\\s+|(?=" + STREET + "\\b))|" +
+  "compar\\w*\\s+(?:avec|[aà])\\s+|centre\\s+(?:la\\s+carte\\s+)?sur\\s+|(?:va|aller)\\s+[aà]\\s+)", 'i');
+const CUT_RE = new RegExp(
+  "\\s*(?:[.;!?\\n]|,\\s*(?:je|j'|avec|et|pour|on|nous|il|elle|c'est|mais|en|a|à)\\b|" +
+  "\\s(?:avec|pour|mais|qui|car|je|j'ai|et\\s+(?:je|j'|les|des|la|le|l'|mes|ma|mon|un|une|aussi|avoir)|en\\s+moins|dans\\s+un\\s+rayon)\\b|" +
+  "\\s(?:[aà]\\s+|en\\s+)?(?:moins\\s+de\\s+)?\\d+(?:[.,]\\d+)?\\s*(?:min|mins|minutes?|mn|km|kilom[eè]tres?|m|m[eè]tres?)\\b|\\s[aà]\\s+pied)", 'i');
+const ADDR_STOP = /\b(le|la|les|l|des|du|de|d|un|une|mes|ma|mon|et|ici|chez|moi|proche|proches|quartier|lieux|coin)\b/g;
+
+function cleanAddr(s){
+  s = s.replace(/^[\s,:'"-]+/, '');
+  const cut = s.search(CUT_RE);
+  if (cut >= 0) s = s.slice(0, cut);
+  // « Nantes près de la gare » devient « la gare, Nantes », plus facile à géocoder
+  const near = s.match(/^(.+?)\s+(?:pr[eè]s|autour|[aà]\s+c[oô]t[eé]|proche)\s+(?:des|du|de|d')\s*(.+)$/i);
+  if (near) s = near[2] + ', ' + near[1];
+  s = s.replace(/\s+(?:à|a)\s+(?=[A-ZÀ-Ý])/u, ', ');   // « rue du Marché à Lille » → « rue du Marché, Lille »
+  return s.replace(/[\s,:'"-]+$/, '').trim();
+}
+function looksLikePlace(a){
+  if (!a) return false;
+  let t = norm(a);
+  for (const re of Object.values(CAT_KW)) t = t.replace(new RegExp(re.source, 'g'), ' ');
+  t = t.replace(ADDR_STOP, ' ').replace(/[^a-z0-9]+/g, '');
+  return t.length >= 3;
+}
+function extractAddress(raw){
+  const s = String(raw).replace(/[’`]/g, "'");
+  const tn = norm(s);
+  const geo = GEO_RE.test(tn);
+  const cands = [];
+  const lead = s.match(LEAD_RE);
+  if (lead) cands.push(cleanAddr(s.slice(lead.index + lead[0].length)));
+  const street = s.match(new RegExp('\\b\\d{1,4}\\s*(?:bis|ter)?,?\\s+' + STREET + '\\b[^.;!?\\n]*', 'i'));
+  if (street) cands.push(cleanAddr(street[0]));
+  const named = s.match(new RegExp('(?:^|\\s)' + STREET + '\\s+(?:de\\s+la\\s+|de\\s+l\'|du\\s+|des\\s+|de\\s+|d\')?[A-ZÀ-Ý][^.;!?\\n]*', ''));
+  if (named) cands.push(cleanAddr(named[0]));
+  const cp = s.match(/\b\d{5}\s+[A-ZÀ-Ý][\p{L}'-]+(?:[\s-][A-ZÀ-Ý][\p{L}'-]+)*/u);
+  if (cp) cands.push(cp[0].trim());
+  const city = s.match(/(?:^|\s)(?:à|a|sur|dans|vers|au)\s+((?:[A-ZÀ-Ý][\p{L}'-]+)(?:(?:\s|-)(?:sur|sous|en|le|la|les|de|du|des|lès|lez|d'|[A-ZÀ-Ý][\p{L}'-]+))*)/u);
+  if (city) cands.push(city[1].replace(/(?:\s|-)(?:sur|sous|en|le|la|les|de|du|des|lès|lez|d')$/u, '').trim());
+  let addr = cands.find(looksLikePlace) || null;
+  // « étudiant à Rennes … près de la fac de Villejean » : on ajoute la ville au lieu trouvé
+  const town = city && city[1].trim();
+  if (addr && town && lead && looksLikePlace(town) && !norm(addr).includes(norm(town)) && !/\d{5}|,/.test(addr)) addr += ', ' + town;
+  return { addr, geo: geo && !addr };
+}
+
+function catsIn(t){
+  const set = new Set();
+  for (const c of CATS) if (CAT_KW[c.id].test(t)) set.add(c.id);
+  for (const u of UNIVERS) if (UNI_KW[u.id].test(t)) CATS.filter(c => c.u === u.id).forEach(c => set.add(c.id));
+  return [...set];
+}
+
+function parseQuery(raw, current){
+  const t0 = norm(raw);
+  const radius = extractRadius(t0);
+  const { addr, geo } = extractAddress(raw);
+  let t = t0.replace(RADIUS_STRIP, ' ')
+            .replace(/\b(a pied|de marche|en marchant|marcher)\b/g, ' ')
+            .replace(/\ben train de\b/g, ' ');
+  if (addr) t = t.split(norm(addr)).join(' ');
+  t = t.replace(/\s+/g, ' ');
+
+  const intents = INTENT_KW.filter(([, re]) => re.test(t)).map(([k]) => k);
+  const specific = intents.filter(i => i !== 'emmenagement');
+  const rm = t.match(REMOVE_RE);
+  const before = rm ? t.slice(0, rm.index) : t;
+  const after = rm ? t.slice(rm.index) : '';
+  const mentioned = catsIn(before);
+  const removed = rm ? catsIn(after) : [];
+  const additive = ADD_RE.test(t) && !ONLY_RE.test(t);
+  const all = ALL_RE.test(t);
+
+  let packs = [];
+  let set = null;
+  const base = () => new Set(additive ? current : []);
+  if (all) set = new Set(ALL_IDS);
+  else if (specific.length) {
+    packs = specific; set = base();
+    packs.forEach(p => PACKS[p].cats.forEach(c => set.add(c)));
+    mentioned.forEach(c => set.add(c));
+  } else if (intents.includes('emmenagement') && (!mentioned.length || MORE_RE.test(t))) {
+    packs = ['emmenagement']; set = base();
+    PACKS.emmenagement.cats.forEach(c => set.add(c));
+    mentioned.forEach(c => set.add(c));
+  } else if (mentioned.length) {
+    set = base(); mentioned.forEach(c => set.add(c));
+  }
+  if (removed.length) { if (!set) set = new Set(current); removed.forEach(c => set.delete(c)); }
+
+  const cats = set ? ALL_IDS.filter(id => set.has(id)) : null;
+  return {
+    cats, packs, mentioned, removed, intents, all,
+    radius, address: addr, geo,
+    compare: COMPARE_RE.test(t0),
+    understood: !!(cats || radius || addr || geo)
+  };
+}
+
+if (!window.L) {
+  document.getElementById('placeLabel').textContent = 'La bibliothèque de carte n\'a pas pu être chargée. Vérifiez votre connexion internet puis rechargez la page.';
+  throw new Error('Leaflet indisponible');
+}
+
+/* ============================================================
+   Outils
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+  del(k){ try { localStorage.removeItem(k); } catch {} }
+};
+function dist(a, b){
+  const R = 6371000, toR = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * toR, dLon = (b[1] - a[1]) * toR;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+async function fetchJSON(url, opts = {}, ms = 12000){
+  const ctl = new AbortController();
+  const tm = setTimeout(() => ctl.abort(), ms);
+  if (opts.signal) { if (opts.signal.aborted) ctl.abort(); else opts.signal.addEventListener('abort', () => ctl.abort()); }
+  try {
+    const r = await fetch(url, { ...opts, signal: ctl.signal });
+    if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+    return await r.json();
+  } finally { clearTimeout(tm); }
+}
+// Appli native (Capacitor) : plugins chargés seulement s'ils existent
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const nativePlugins = {};
+function nativePlugin(name){
+  if (!NATIVE) return null;
+  const C = window.Capacitor;
+  if (!(name in nativePlugins)) nativePlugins[name] = C.isPluginAvailable && !C.isPluginAvailable(name) ? null : (C.registerPlugin ? C.registerPlugin(name) : C.Plugins && C.Plugins[name]) || null;
+  return nativePlugins[name];
+}
+const blobToBase64 = blob => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = ko; r.readAsDataURL(blob); });
+let toastT;
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 3200);
+}
+const isMobile = () => matchMedia('(max-width:760px)').matches;
+
+/* ============================================================
+   Overpass : une requête au rayon maximal, cache local, plusieurs serveurs
+   ============================================================ */
+const ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+];
+let epStart = 0;
+function buildQuery(c, R){
+  const a = `(around:${Math.round(R)},${c[0].toFixed(6)},${c[1].toFixed(6)})`;
+  return `[out:json][timeout:25];(
+nwr["shop"~"^(bakery|pastry|supermarket|convenience|greengrocer|butcher|cheese|seafood|farm)$"]${a};
+nwr["amenity"~"^(restaurant|cafe|fast_food|marketplace|doctors|clinic|hospital|pharmacy|dentist|school|kindergarten|childcare|post_office|bank|charging_station|bicycle_rental|toilets)$"]${a};
+nwr["healthcare"~"^(doctor|dentist|physiotherapist)$"]${a};
+nwr["leisure"~"^(park|playground|garden|fitness_centre|sports_centre|swimming_pool)$"]${a};
+node["highway"="bus_stop"]${a};
+nwr["railway"~"^(station|halt|tram_stop)$"]${a};
+);out center qt;`;
+}
+// Si un serveur tarde plus de 8 s, on lance aussi le suivant ; la première réponse l'emporte.
+function overpass(q){
+  const order = ENDPOINTS.map((_, i) => (epStart + i) % ENDPOINTS.length);
+  return new Promise((resolve, reject) => {
+    let done = false, launched = 0, failed = 0, lastErr = null, hedgeT = null;
+    const ctrls = [];
+    const finish = () => { done = true; clearTimeout(hedgeT); ctrls.forEach(c => c.abort()); };
+    const launch = () => {
+      if (done || launched >= order.length) return;
+      const k = order[launched++], ctl = new AbortController();
+      ctrls.push(ctl);
+      if (launched > 1) setStatus(`Serveur OpenStreetMap lent, essai d'un autre serveur (${launched}/${order.length})…`);
+      fetchJSON(ENDPOINTS[k], {
+        method: 'POST', signal: ctl.signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: 'data=' + encodeURIComponent(q)
+      }, 40000).then(j => {
+        if (!Array.isArray(j.elements)) throw new Error('Réponse Overpass invalide');
+        if (!j.elements.length && j.remark && /error|timeout|memory/i.test(j.remark)) throw new Error(j.remark);
+        if (done) return;
+        epStart = k; finish(); resolve(j);
+      }).catch(e => {
+        if (done) return;
+        failed++; lastErr = e;
+        if (failed >= order.length) { finish(); reject(lastErr); }
+        else if (launched - failed < 1) launch();
+      });
+    };
+    const hedge = () => { launch(); if (!done && launched < order.length) hedgeT = setTimeout(hedge, 8000); };
+    hedge();
+  });
+}
+function classify(t){
+  if (t.access === 'private' || t.access === 'no') return null;
+  const s = t.shop, a = t.amenity, l = t.leisure, h = t.healthcare, r = t.railway;
+  if (s === 'bakery' || s === 'pastry') return ['boulangerie', s];
+  if (s === 'supermarket' || s === 'convenience') return ['supermarche', s];
+  if (a === 'restaurant' || a === 'cafe' || a === 'fast_food') return ['restaurant', a];
+  if (a === 'marketplace') return ['marche', a];
+  if (['greengrocer','butcher','cheese','seafood','farm'].includes(s)) return ['marche', s];
+  if (a === 'pharmacy') return ['pharmacie', 'pharmacy'];
+  if (a === 'dentist' || h === 'dentist') return ['dentiste', 'dentist'];
+  if (h === 'physiotherapist') return ['dentiste', 'physiotherapist'];
+  if (a === 'doctors' || a === 'clinic' || a === 'hospital') return ['medecin', a];
+  if (h === 'doctor') return ['medecin', 'doctor'];
+  if (a === 'school' || a === 'kindergarten' || a === 'childcare') return ['ecole', a];
+  if (l === 'park' || l === 'playground') return ['parc', l];
+  if (l === 'garden' && t.name) return ['parc', 'garden'];
+  if (l === 'fitness_centre' || l === 'sports_centre') return ['sport', l];
+  if (l === 'swimming_pool' && (t.name || t.access === 'yes' || t.access === 'customers')) return ['sport', l];
+  if (a === 'post_office' || a === 'bank') return ['poste', a];
+  if (t.station === 'subway') return ['transport', 'subway'];
+  if (r === 'tram_stop') return ['transport', 'tram_stop'];
+  if (r === 'station' || r === 'halt') return ['transport', r];
+  if (t.highway === 'bus_stop') return ['transport', 'bus_stop'];
+  if (a === 'charging_station') return ['borne', a];
+  if (a === 'bicycle_rental') return ['velo', a];
+  if (a === 'toilets') return ['toilettes', a];
+  return null;
+}
+function parseElements(els){
+  const out = [], seen = new Map();
+  for (const e of els) {
+    const t = e.tags || {};
+    const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
+    if (lat == null || lon == null) continue;
+    const cl = classify(t); if (!cl) continue;
+    const [cid, type] = cl;
+    let name = (t.name || t.brand || (cid === 'borne' || cid === 'velo' ? t.network || t.operator : '') || '').trim();
+    if (cid === 'transport' && name) {             // un arrêt de bus a souvent un poteau par sens
+      const k = name + '|' + type, arr = seen.get(k) || [];
+      if (arr.some(p => dist(p, [lat, lon]) < 150)) continue;
+      arr.push([lat, lon]); seen.set(k, arr);
+    }
+    out.push([+lat.toFixed(6), +lon.toFixed(6), CAT_IDX[cid], name.slice(0, 80), type]);
+  }
+  return out;
+}
+const CACHE_V = 'cm1', TTL = 24 * 3600e3, MAX_ENTRIES = 12;
+const memCache = [];
+function cacheFind(c, r, allowStale){
+  const idx = store.get(CACHE_V + ':idx', []);
+  const fits = e => dist(c, [e.lat, e.lon]) + r <= e.R && (allowStale || Date.now() - e.ts < TTL);
+  const m = memCache.find(fits);
+  if (m) return m;
+  const e = idx.find(fits);
+  if (!e) return null;
+  const places = store.get(CACHE_V + ':d:' + e.k, null);
+  if (!places) return null;
+  const hit = { ...e, places };
+  memCache.unshift(hit); memCache.length = Math.min(memCache.length, 6);
+  return hit;
+}
+function cachePut(c, R, places){
+  const e = { k: Date.now().toString(36), lat: c[0], lon: c[1], R, ts: Date.now() };
+  memCache.unshift({ ...e, places }); memCache.length = Math.min(memCache.length, 6);
+  let idx = store.get(CACHE_V + ':idx', []).filter(x => Date.now() - x.ts < TTL * 7);
+  idx.unshift(e);
+  while (idx.length > MAX_ENTRIES) store.del(CACHE_V + ':d:' + idx.pop().k);
+  while (!store.set(CACHE_V + ':d:' + e.k, places) && idx.length > 1) store.del(CACHE_V + ':d:' + idx.pop().k);
+  store.set(CACHE_V + ':idx', idx);
+}
+async function getPlaces(c, r){
+  const hit = cacheFind(c, r, false);
+  if (hit) return { places: hit.places, cached: true };
+  const R = Math.max(r, MIN_FETCH) + MARGIN;
+  try {
+    const j = await overpass(buildQuery(c, R));
+    const places = parseElements(j.elements);
+    cachePut(c, R, places);
+    return { places, cached: false };
+  } catch (e) {
+    const stale = cacheFind(c, r, true);
+    if (stale) return { places: stale.places, cached: true, stale: true };
+    throw e;
+  }
+}
+
+/* ============================================================
+   Score
+   ============================================================ */
+function computeStats(center, r, places, active){
+  const per = {};
+  CATS.forEach(c => per[c.id] = { list: [], n: 0, d: null, s: 0 });
+  for (const p of places) {
+    const d = dist(center, [p[0], p[1]]);
+    if (d <= r) per[CATS[p[2]].id].list.push({ p, d });
+  }
+  let sw = 0, ss = 0;
+  for (const c of CATS) {
+    const x = per[c.id];
+    x.list.sort((a, b) => a.d - b.d);
+    x.n = x.list.length;
+    if (x.n) {
+      x.d = x.list[0].d;
+      const prox = x.d <= c.ideal ? 1 : Math.pow(0.5, (x.d - c.ideal) / c.ideal);
+      const dens = Math.min(1, Math.log1p(x.n) / Math.log1p(c.target));   // le 1er lieu compte plus que le 10e
+      x.s = 0.55 * prox + 0.45 * dens;
+    }
+    if (active.has(c.id)) { sw += c.w; ss += c.w * x.s; }
+  }
+  return { per, score: sw ? Math.round(100 * ss / sw) : null };
+}
+function scoreLabel(s){
+  if (s == null) return ['Aucune catégorie', 'Cochez au moins une catégorie pour calculer le score.'];
+  if (s >= 80) return ['Excellent quartier', 'Presque tout est accessible à pied, rapidement.'];
+  if (s >= 65) return ['Très pratique', 'La plupart des besoins sont couverts à courte distance.'];
+  if (s >= 50) return ['Correct', 'L\'essentiel est là, certains services demandent plus de marche.'];
+  if (s >= 35) return ['Moyen', 'Plusieurs services manquent dans le rayon choisi.'];
+  return ['Peu équipé', 'Peu de services à pied : prévoyez un moyen de transport.'];
+}
+
+/* ============================================================
+   État et carte
+   ============================================================ */
+const S = {
+  center: null, label: '', r: 800,
+  active: new Set(PACKS.emmenagement.cats),
+  places: [], stats: null, cmpA: null, tok: 0, labelTok: 0
+};
+const prefs = store.get('cm:prefs', null);
+if (prefs) {
+  if (prefs.r) S.r = prefs.r;
+  if (Array.isArray(prefs.active)) S.active = new Set(prefs.active.filter(id => CAT[id]));
+}
+const fromHash = readHash();
+if (fromHash.r) S.r = fromHash.r;
+if (fromHash.cats) S.active = new Set(fromHash.cats);
+
+const servedOverHttp = /^https?:$/.test(location.protocol);
+const map = L.map('map', { zoomControl: false, attributionControl: true, maxZoom: 19 }).setView([46.6, 2.4], 6);
+L.control.zoom({ position: 'topright' }).addTo(map);
+map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+// Fonds de carte gratuits et sans clé. Si un fond ne charge pas, on passe au suivant de la liste.
+const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+const tl = (url, opt) => L.tileLayer(url, { maxZoom: 19, ...opt });
+
+// Style vectoriel « Lagon » (tuiles OpenFreeMap, schéma OpenMapTiles)
+const LAGON_STYLE = (() => {
+  const C = {
+    land: '#d4dce3', urban: '#cbd4dc', bShadow: '#a3b3c2', bTop: '#e4e9ee', bLine: '#b6c3ce',
+    water: '#14afd0', coast: '#86e1ee', river: '#2bb6d6', sand: '#e7c77f', grass: '#a9c8a1', wood: '#86ad80',
+    minor: '#f6f8fa', minorCase: '#bac6d1', major: '#ffffff', majorCase: '#a7b6c4', motor: '#efe5bf', motorCase: '#c8b884',
+    path: '#eef2f5', rail: '#b0bccb', label: '#4d5f70', place: '#2f4255'
+  };
+  const z = (a, b, c, d) => ['interpolate', ['exponential', 1.5], ['zoom'], a, b, c, d];
+  const cls = (...v) => ['match', ['get', 'class'], v, true, false];
+  const src = { source: 'omt' };
+  const road = (id, filter, color, w, minzoom = 5) => ({ id, type: 'line', ...src, 'source-layer': 'transportation', minzoom, filter, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': w } });
+  const major = cls('primary', 'secondary', 'tertiary'), motor = cls('motorway', 'trunk'), minor = cls('minor', 'service');
+  return {
+    version: 8,
+    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+    layers: [
+      { id: 'bg', type: 'background', paint: { 'background-color': C.land } },
+      { id: 'urban', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('residential', 'commercial', 'industrial', 'retail', 'neighbourhood', 'suburb', 'quarter'), paint: { 'fill-color': C.urban } },
+      { id: 'sand', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('sand', 'beach'), paint: { 'fill-color': C.sand } },
+      { id: 'grass', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('grass', 'farmland', 'wetland'), paint: { 'fill-color': C.grass, 'fill-opacity': 0.75 } },
+      { id: 'wood', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('wood', 'forest'), paint: { 'fill-color': C.wood, 'fill-opacity': 0.8 } },
+      { id: 'park', type: 'fill', ...src, 'source-layer': 'park', paint: { 'fill-color': C.grass, 'fill-opacity': 0.7 } },
+      { id: 'parkuse', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('park', 'grass', 'cemetery', 'pitch', 'playground', 'garden'), paint: { 'fill-color': C.grass, 'fill-opacity': 0.7 } },
+      { id: 'coast', type: 'line', ...src, 'source-layer': 'water', paint: { 'line-color': C.coast, 'line-width': z(8, 2, 16, 18), 'line-blur': z(8, 2, 16, 14), 'line-opacity': 0.9 } },
+      { id: 'water', type: 'fill', ...src, 'source-layer': 'water', paint: { 'fill-color': C.water } },
+      { id: 'water-edge', type: 'line', ...src, 'source-layer': 'water', paint: { 'line-color': C.coast, 'line-width': z(10, 1, 17, 7), 'line-blur': z(10, 1, 17, 6), 'line-offset': z(10, 0.5, 17, 3.5), 'line-opacity': 0.75 } },
+      { id: 'river', type: 'line', ...src, 'source-layer': 'waterway', paint: { 'line-color': C.river, 'line-width': z(8, 0.5, 17, 6) } },
+      road('path', cls('path', 'track', 'pedestrian'), C.path, z(14, 0.6, 18, 3), 14),
+      { id: 'rail', type: 'line', ...src, 'source-layer': 'transportation', minzoom: 11, filter: cls('rail', 'transit'), paint: { 'line-color': C.rail, 'line-width': z(11, 0.8, 18, 3), 'line-dasharray': [3, 2] } },
+      road('minor-case', minor, C.minorCase, z(12, 1, 18, 23), 12),
+      road('major-case', major, C.majorCase, z(8, 1, 18, 30), 8),
+      road('motor-case', motor, C.motorCase, z(5, 1.2, 18, 34)),
+      road('minor', minor, C.minor, z(12, 0.5, 18, 20), 12),
+      road('major', major, C.major, z(8, 0.6, 18, 26), 8),
+      road('motor', motor, C.motor, z(5, 0.8, 18, 29)),
+      { id: 'bld-shadow', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': C.bShadow, 'fill-translate': [1.5, 2] } },
+      { id: 'bld', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': C.bTop, 'fill-outline-color': C.bLine } },
+      { id: 'road-label', type: 'symbol', ...src, 'source-layer': 'transportation_name', minzoom: 14, layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': z(14, 10, 18, 14), 'text-max-angle': 30 }, paint: { 'text-color': C.label, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 } },
+      { id: 'water-label', type: 'symbol', ...src, 'source-layer': 'water_name', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Italic'], 'text-size': 13 }, paint: { 'text-color': '#ffffff', 'text-halo-color': C.water, 'text-halo-width': 1 } },
+      { id: 'place-label', type: 'symbol', ...src, 'source-layer': 'place', filter: cls('city', 'town', 'village', 'suburb', 'quarter', 'neighbourhood'), layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'class'], 'city', 17, 'town', 15, 13], 'text-transform': 'uppercase', 'text-letter-spacing': 0.06, 'text-max-width': 8 }, paint: { 'text-color': C.place, 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.6 } }
+    ]
+  };
+})();
+
+const GL_CSS = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+const GL_JS = ['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js'];
+let glLoading = null;
+function loadGL(){
+  if (!glLoading) {
+    const add = (tag, attrs) => new Promise((ok, ko) => { const el = Object.assign(document.createElement(tag), attrs, { onload: ok, onerror: ko }); document.head.appendChild(el); });
+    glLoading = (async () => {
+      add('link', { rel: 'stylesheet', href: GL_CSS }).catch(() => {});
+      for (const src of GL_JS) await add('script', { src });
+      if (!L.maplibreGL) throw new Error('maplibre-gl-leaflet');
+    })();
+    glLoading.catch(() => { glLoading = null; });
+  }
+  return glLoading;
+}
+
+// Fond vectoriel chargé à la demande ; émet « fail » si WebGL, les scripts ou les tuiles manquent.
+const VectorBase = L.Layer.extend({
+  initialize(style, opt){ L.setOptions(this, opt); this._style = style; },
+  onAdd(m){
+    this._active = true;
+    loadGL().then(() => {
+      if (!this._active) return;
+      this._gl = this._gl || L.maplibreGL({ style: this._style, attributionControl: false });
+      try { m.addLayer(this._gl); } catch (e) { this._gl = null; return this.fire('fail'); }
+      const gl = this._gl.getMaplibreMap();
+      let loaded = false, errors = 0;
+      const timer = setTimeout(() => { if (!loaded && this._active) this.fire('fail'); }, 15000);
+      gl.on('data', e => { if (e.tile && !loaded) { loaded = true; clearTimeout(timer); } });
+      gl.on('error', () => { if (!loaded && ++errors >= 4) { clearTimeout(timer); if (this._active) this.fire('fail'); } });
+    }, () => { if (this._active) this.fire('fail'); });
+  },
+  onRemove(m){ this._active = false; if (this._gl && m.hasLayer(this._gl)) m.removeLayer(this._gl); }
+});
+
+const ALL_BASES = {
+  lagon: () => ({ name: 'Lagon', main: new VectorBase(LAGON_STYLE, { attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · ' + OSM_ATTR }) }),
+  // Plan des rues Esri recoloré en CSS
+  sun:   () => ({ name: 'Soleil (jour)', main: tl(ESRI + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { className: 'sun-base', attribution: OSM_ATTR + ' · fond Esri' }) }),
+  // Fond sombre Esri recoloré en CSS, noms de rues en cyan
+  neon:  () => { const base = tl(ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, className: 'neon-base', attribution: OSM_ATTR + ' · fond Esri' });
+                 return { name: 'Néon nuit', key: 'neon', main: base, layer: L.layerGroup([base, tl(ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, className: 'neon-labels', zIndex: 2 })]) }; },
+  osm:   () => ({ name: 'Plan OpenStreetMap', main: tl('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: OSM_ATTR }) }),
+  esri:  () => ({ name: 'Plan des rues (Esri)', main: tl(ESRI + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: OSM_ATTR + ' · fond Esri' }) }),
+  osmfr: () => ({ name: 'OpenStreetMap France', main: tl('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { subdomains: 'abc', attribution: OSM_ATTR + ' · fond OSM France' }) }),
+  hot:   () => ({ name: 'Humanitaire (OSM)', main: tl('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { subdomains: 'abc', attribution: OSM_ATTR + ' · fond HOT, OSM France' }) })
+};
+// En file://, pas d'en-tête Referer : tile.openstreetmap.org renvoie « Access blocked ». On l'écarte dans ce cas.
+const BASES = (servedOverHttp ? ['lagon', 'sun', 'neon', 'osm', 'esri', 'osmfr', 'hot'] : ['lagon', 'sun', 'neon', 'esri', 'osmfr', 'hot'])
+  .map(k => { const b = ALL_BASES[k](); b.key = k; b.layer = b.layer || b.main; return b; });
+const savedBase = store.get('cm:base', 'lagon');
+let baseIdx = Math.max(0, BASES.findIndex(b => b.key === savedBase)), autoSwitch = true;
+function baseFailed(i){
+  if (i !== baseIdx) return;
+  if (!autoSwitch || i >= BASES.length - 1) return toast('Ce fond de carte ne répond pas. Essayez-en un autre (bouton calques).');
+  map.removeLayer(BASES[i].layer); baseIdx = i + 1; BASES[baseIdx].layer.addTo(map);
+  applyTheme(); toast(`Fond de carte indisponible, passage à « ${BASES[baseIdx].name} ».`);
+}
+BASES.forEach((b, i) => {
+  let ok = 0, ko = 0;
+  b.main.on('tileload', () => { ok++; });
+  b.main.on('tileerror', () => { if (++ko === 4 && ok === 0) baseFailed(i); });
+  b.main.on('fail', () => baseFailed(i));
+});
+BASES[baseIdx].layer.addTo(map);
+L.control.layers(Object.fromEntries(BASES.map(b => [b.name, b.layer])), null, { position: 'topright' }).addTo(map);
+map.on('baselayerchange', e => {
+  autoSwitch = false; baseIdx = BASES.findIndex(b => b.layer === e.layer);
+  store.set('cm:base', BASES[baseIdx].key); applyTheme();
+});
+function applyTheme(){
+  const k = BASES[baseIdx].key, neon = k === 'neon', sun = k === 'sun', lagon = k === 'lagon';
+  document.body.classList.toggle('neon', neon);
+  document.body.classList.toggle('sun', sun);
+  document.body.classList.toggle('lagon', lagon);
+  document.querySelector('meta[name=theme-color]').content = neon ? '#130a26' : sun ? '#ff7a1a' : lagon ? '#14afd0' : '#13242e';
+  circle.setStyle(neon ? { color: '#2ee6ff', fillColor: '#ff2bd6', fillOpacity: 0.07 }
+    : sun ? { color: '#ff4f7b', fillColor: '#ffb000', fillOpacity: 0.08 }
+    : lagon ? { color: '#ff3d8b', fillColor: '#14afd0', fillOpacity: 0.08 }
+    : { color: '#d6127e', fillColor: '#d6127e', fillOpacity: 0.05 });
+  aCircle.setStyle({ color: neon ? '#ff9a4d' : sun || lagon ? '#0077b6' : '#13242e' });
+  centerMarker.setIcon(lagon ? ringIcon : pinIcon('#d6127e'));
+}
+
+const crossSvg = (c, size = 20) => {
+  const plus = c.u === 'sante';
+  const d = plus ? 'M10 3.5V16.5M3.5 10H16.5' : 'M5 5L15 15M15 5L5 15';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" aria-hidden="true"><path d="${d}" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="${d}" stroke="${c.color}" stroke-width="3.8" stroke-linecap="round"/></svg>`;
+};
+const ICONS = Object.fromEntries(CATS.map(c => [c.id, L.divIcon({ className: 'xm', html: crossSvg(c), iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -8] })]));
+const pinIcon = (fill, letter) => L.divIcon({
+  className: 'pin', iconSize: [34, 44], iconAnchor: [17, 42], popupAnchor: [0, -38],
+  html: `<svg width="34" height="44" viewBox="0 0 34 44"><path d="M17 43C17 43 3 27 3 17a14 14 0 0 1 28 0c0 10-14 26-14 26z" fill="${fill}" stroke="#fff" stroke-width="2.5"/>${letter ? `<text x="17" y="22" text-anchor="middle" font-family="Overpass,sans-serif" font-weight="800" font-size="15" fill="#fff">${letter}</text>` : '<circle cx="17" cy="17" r="5.5" fill="#fff"/>'}</svg>`
+});
+const ringIcon = L.divIcon({ className: 'ringpin', iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -16], html: '<i></i><i></i><b></b>' });
+const centerMarker = L.marker([0, 0], { icon: pinIcon('#d6127e'), draggable: true, autoPan: true, zIndexOffset: 1000, keyboard: true, title: 'Point analysé (déplaçable)' });
+const circle = L.circle([0, 0], { radius: S.r, color: '#d6127e', weight: 2, dashArray: '6 7', fillColor: '#d6127e', fillOpacity: 0.05, interactive: false });
+const aMarker = L.marker([0, 0], { icon: pinIcon('#13242e', 'A'), zIndexOffset: 900, title: 'Point A (comparaison)' });
+const aCircle = L.circle([0, 0], { radius: S.r, color: '#13242e', weight: 1.5, dashArray: '3 6', fill: false, interactive: false });
+// Regroupement des repères, désactivé à partir du zoom 17
+applyTheme();
+const layer = (L.markerClusterGroup ? L.markerClusterGroup({
+  maxClusterRadius: 44, disableClusteringAtZoom: 17, showCoverageOnHover: false, spiderfyOnMaxZoom: true, chunkedLoading: true,
+  iconCreateFunction: cl => { const n = cl.getChildCount(), z = n < 10 ? 30 : n < 50 ? 36 : 42; return L.divIcon({ html: String(n), className: 'cl', iconSize: [z, z] }); }
+}) : L.layerGroup()).addTo(map);
+const markerById = new Map();
+
+centerMarker.on('dragend', () => { const p = centerMarker.getLatLng(); setCenter([p.lat, p.lng], null, { fit: false }); });
+// Un clic qui ferme une fiche ne déplace pas le point ; un double-clic zoome sans déplacer.
+let popupOpen = false, hadPopup = false, clickT;
+map.on('popupopen', () => { popupOpen = true; });
+map.on('popupclose', () => { popupOpen = false; });
+map.on('preclick', () => { hadPopup = popupOpen; });
+map.on('click', e => {
+  closeSugg();
+  if (hadPopup) return;
+  clearTimeout(clickT);
+  clickT = setTimeout(() => setCenter([e.latlng.lat, e.latlng.lng], null, { fit: false }), 260);
+});
+map.on('dblclick', () => clearTimeout(clickT));
+
+function fitView(){
+  if (!S.center) return;
+  const b = L.latLng(S.center).toBounds(S.r * 2.1);
+  const opt = isMobile() ? { paddingTopLeft: [20, 70], paddingBottomRight: [20, 200] } : { paddingTopLeft: [420, 40], paddingBottomRight: [40, 40] };
+  map.fitBounds(b, { ...opt, maxZoom: 17 });
+}
+
+async function setCenter(c, label, { fit = true, analyze: run = true } = {}){
+  S.center = c;
+  centerMarker.setLatLng(c).addTo(map);
+  circle.setLatLng(c).setRadius(S.r).addTo(map);
+  if (fit) fitView();
+  onCenterChange();
+  if (label) setLabel(label);
+  else { setLabel(`${c[0].toFixed(5)}, ${c[1].toFixed(5)}`); reverse(c); }
+  if (run) return analyze();
+}
+function setLabel(l){ S.label = l; $('#placeLabel').textContent = l; }
+
+/* ============================================================
+   Géocodage (Photon pour l'autocomplétion, Nominatim en secours)
+   ============================================================ */
+function photonLabel(p){
+  const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+  const city = [p.postcode, p.city || p.town || p.village || p.county].filter(Boolean).join(' ');
+  const parts = [p.name, street, city, p.country && p.country !== 'France' ? p.country : ''].filter(Boolean);
+  return [...new Set(parts)].join(', ');
+}
+// Photon limite parfois les requêtes : après un échec, Nominatim pendant 60 s.
+let photonDownUntil = 0;
+const photonOk = () => Date.now() > photonDownUntil;
+const photonFail = () => { photonDownUntil = Date.now() + 60000; };
+async function geocode(q){
+  const bias = S.center ? `&lat=${S.center[0]}&lon=${S.center[1]}&location_bias_scale=0.3` : '';
+  if (photonOk()) try {
+    const j = await fetchJSON(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&lang=fr${bias}`, {}, 7000);
+    const f = j.features && j.features[0];
+    if (f) return { c: [f.geometry.coordinates[1], f.geometry.coordinates[0]], label: photonLabel(f.properties) };
+  } catch (e) { photonFail(e); }
+  try {
+    const j = await fetchJSON(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`);
+    if (j[0]) return { c: [+j[0].lat, +j[0].lon], label: j[0].display_name.split(', ').slice(0, 4).join(', ') };
+  } catch {}
+  return null;
+}
+async function reverse(c){
+  const tok = ++S.labelTok;
+  let label = null;
+  if (photonOk()) try {
+    const j = await fetchJSON(`https://photon.komoot.io/reverse?lat=${c[0]}&lon=${c[1]}&lang=fr`, {}, 6000);
+    const f = j.features && j.features[0];
+    if (f) label = photonLabel(f.properties);
+  } catch (e) { photonFail(e); }
+  if (!label) try {
+    const j = await fetchJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=fr&lat=${c[0]}&lon=${c[1]}`, {}, 8000);
+    if (j.display_name) label = j.display_name.split(', ').slice(0, 4).join(', ');
+  } catch {}
+  if (label && tok === S.labelTok) { setLabel(label); writeHash(); }
+}
+
+/* Autocomplétion */
+const q = $('#q'), sugg = $('#sugg');
+let suggT, suggCtl, suggItems = [], suggSel = -1;
+q.addEventListener('input', () => {
+  clearTimeout(suggT);
+  const v = q.value.trim();
+  if (v.length < 3) return closeSugg();
+  suggT = setTimeout(() => loadSugg(v), 280);
+});
+q.addEventListener('focus', () => { if (isMobile()) openSheet(true); });
+async function loadSugg(v){
+  if (suggCtl) suggCtl.abort();
+  suggCtl = new AbortController();
+  const bias = S.center ? `&lat=${S.center[0]}&lon=${S.center[1]}&location_bias_scale=0.3` : '';
+  try {
+    if (!photonOk()) throw new Error('Photon en pause');
+    const j = await fetchJSON(`https://photon.komoot.io/api/?q=${encodeURIComponent(v)}&limit=6&lang=fr${bias}`, { signal: suggCtl.signal }, 6000);
+    suggItems = (j.features || []).map(f => {
+      const p = f.properties;
+      const main = p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || p.city || '';
+      const sub = [p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : '', [p.postcode, p.city || p.town || p.village].filter(Boolean).join(' '), p.country !== 'France' ? p.country : ''].filter(Boolean).join(', ');
+      return { c: [f.geometry.coordinates[1], f.geometry.coordinates[0]], main, sub, label: photonLabel(p) };
+    });
+    suggSel = -1; renderSugg();
+  } catch (e) {
+    if (suggCtl.signal.aborted) return;          // une frappe plus récente a pris le relais
+    if (photonOk()) photonFail(); suggItems = []; suggSel = -1;
+    sugg.innerHTML = '<li aria-disabled="true"><small>Suggestions indisponibles pour le moment. Appuyez sur Entrée pour lancer la recherche.</small></li>';
+    sugg.hidden = false;
+  }
+}
+function renderSugg(){
+  if (!suggItems.length) {
+    sugg.innerHTML = '<li aria-disabled="true"><small>Aucune suggestion. Appuyez sur Entrée pour lancer la recherche.</small></li>';
+  } else {
+    sugg.innerHTML = suggItems.map((s, i) => `<li role="option" id="sg${i}" data-i="${i}" aria-selected="${i === suggSel}">${esc(s.main)}<small>${esc(s.sub)}</small></li>`).join('');
+  }
+  sugg.hidden = false; q.setAttribute('aria-expanded', 'true');
+}
+function closeSugg(){ sugg.hidden = true; q.setAttribute('aria-expanded', 'false'); suggItems = []; }
+function pickSugg(i){
+  const s = suggItems[i]; if (!s) return;
+  q.value = s.label; closeSugg(); q.blur();
+  if (isMobile()) openSheet(false);
+  setCenter(s.c, s.label);
+}
+sugg.addEventListener('mousedown', e => { const li = e.target.closest('li[data-i]'); if (li) { e.preventDefault(); pickSugg(+li.dataset.i); } });
+q.addEventListener('keydown', e => {
+  if (sugg.hidden || !suggItems.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    suggSel = (suggSel + (e.key === 'ArrowDown' ? 1 : -1) + suggItems.length) % suggItems.length;
+    renderSugg(); q.setAttribute('aria-activedescendant', 'sg' + suggSel);
+  } else if (e.key === 'Escape') closeSugg();
+});
+$('#searchForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!sugg.hidden && suggSel >= 0) return pickSugg(suggSel);
+  const v = q.value.trim(); if (!v) return;
+  closeSugg(); q.blur();
+  setStatus('Recherche de l\'adresse…');
+  const g = await geocode(v);
+  setStatus(null);
+  if (!g) return toast('Adresse introuvable. Essayez avec la ville ou le code postal.');
+  if (isMobile()) openSheet(false);
+  setCenter(g.c, g.label);
+});
+document.addEventListener('click', e => { if (!e.target.closest('.search')) closeSugg(); });
+
+/* Géolocalisation */
+function locate(){
+  return new Promise(resolve => {
+    const geo = nativePlugin('Geolocation');
+    if (!geo && !navigator.geolocation) { toast('La géolocalisation n\'est pas disponible sur cet appareil.'); return resolve(false); }
+    setStatus('Recherche de votre position…');
+    const get = geo ? (ok, ko, o) => geo.getCurrentPosition(o).then(ok, e => ko({ code: /denied|refus/i.test(e && e.message) ? 1 : 2 }))
+      : (ok, ko, o) => navigator.geolocation.getCurrentPosition(ok, ko, o);
+    get(p => {
+      setStatus(null);
+      setCenter([p.coords.latitude, p.coords.longitude], null).then(() => resolve(true));
+    }, err => {
+      setStatus(null);
+      toast(err.code === 1 ? 'Accès à la position refusé. Autorisez-le dans le navigateur.' : 'Position introuvable pour le moment.');
+      resolve(false);
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  });
+}
+$('#geoBtn').addEventListener('click', locate);
+
+/* ============================================================
+   Analyse et rendu
+   ============================================================ */
+function setStatus(t){
+  $('#status').hidden = !t;
+  if (t) $('#statusT').textContent = t;
+  $('#progress').classList.toggle('on', !!t);
+}
+function showError(msg){ $('#errMsg').textContent = msg; $('#err').hidden = false; }
+function hideError(){ $('#err').hidden = true; }
+$('#retry').addEventListener('click', () => { hideError(); analyze(); });
+addEventListener('online', () => { if ($('#err').hidden === false) { hideError(); analyze(); } });
+
+async function analyze(){
+  if (!S.center) return;
+  const tok = ++S.tok;
+  setStatus('Chargement des lieux autour du point…');
+  S.failed = false;
+  if (S.placesFor !== placeKey(S.center)) render();
+  try {
+    const res = await getPlaces(S.center, S.r);
+    if (tok !== S.tok) return;
+    S.places = res.places; S.failed = false; S.placesFor = placeKey(S.center);
+    if (S.cmpA) S.cmpA.places = (await getPlaces(S.cmpA.c, S.r)).places;
+    if (tok !== S.tok) return;
+    hideError();
+    if (res.stale) toast('Serveurs indisponibles : affichage des données en cache.');
+    render();
+  } catch (e) {
+    if (tok !== S.tok) return;
+    showError(navigator.onLine === false
+      ? 'Vous semblez hors ligne. Reconnectez-vous pour charger les lieux de ce quartier.'
+      : 'Les serveurs OpenStreetMap (Overpass) ne répondent pas pour le moment. Ils sont parfois saturés : réessayez dans quelques secondes.');
+    S.places = []; S.failed = true; render();
+  } finally {
+    if (tok === S.tok) setStatus(null);
+  }
+}
+
+function render(){
+  if (!S.center) return;
+  S.pending = !S.failed && S.placesFor !== placeKey(S.center);
+  S.stats = computeStats(S.center, S.r, S.pending ? [] : S.places, S.active);
+  applyIso(S.stats); renderQ15();
+  if (!S.failed && !S.pending) saveHistory();
+  renderScore(); renderCats(); renderMarkers(); renderCompare(); renderPacks(); renderRadii();
+  writeHash();
+  store.set('cm:prefs', { c: S.center, label: S.label, r: S.r, active: [...S.active] });
+}
+function renderScore(){
+  const s = S.failed || S.pending ? null : S.stats.score;
+  const [l, p] = S.failed ? ['Données indisponibles', 'Les lieux de ce quartier n\'ont pas pu être chargés.']
+    : S.pending ? ['Analyse en cours…', 'Recherche des commerces et services autour du point.'] : scoreLabel(s);
+  $('#scoreV').textContent = s == null ? '–' : s;
+  $('#mini').innerHTML = `${s == null ? '–' : s}<small>/100</small>`;
+  $('#arc').style.strokeDashoffset = 251.33 * (1 - (s || 0) / 100);
+  $('#scoreL').textContent = l;
+  const n = S.active.size;
+  $('#scoreP').textContent = S.failed ? `${p} Réessayez dans quelques secondes.` : S.pending ? p : `${p} Calculé sur ${n} catégorie${n > 1 ? 's' : ''} dans un rayon de ${fmtDist(S.r)} (≈ ${walkMin(S.r)} min à pied).`;
+}
+function catMeta(x){
+  if (S.failed) return '—';
+  if (S.pending) return '…';
+  if (!x.n) return 'aucun dans le rayon';
+  return `<b>${x.n}</b> · 🚶 ${x.band ? '≤ ' + x.band : walkMin(x.d)} min · ${fmtDist(x.d)}`;
+}
+function renderCats(){
+  const per = S.stats.per;
+  $('#cats').innerHTML = UNIVERS.map(u => {
+    const cs = CATS.filter(c => c.u === u.id);
+    const on = cs.filter(c => S.active.has(c.id)).length;
+    return `<section class="uni"><h2><label><input type="checkbox" data-uni="${u.id}" ${on === cs.length ? 'checked' : ''} data-ind="${on > 0 && on < cs.length ? 1 : 0}">${esc(u.name)}</label></h2>` +
+      cs.map(c => {
+        const x = per[c.id], act = S.active.has(c.id);
+        return `<div class="cat${act ? '' : ' off'}" style="--c:${c.color}">
+          <input type="checkbox" id="c-${c.id}" data-cat="${c.id}" ${act ? 'checked' : ''} aria-label="${esc(c.name)}">
+          ${crossSvg(c, 18)}
+          <button type="button" class="nm" data-go="${c.id}" ${x.n ? '' : 'disabled'} title="${x.n ? 'Voir le plus proche sur la carte' : ''}">${esc(c.name)}</button>
+          <span class="meta">${catMeta(x)}</span>
+          <div class="bar"><i style="width:${Math.round(x.s * 100)}%"></i></div>
+        </div>`;
+      }).join('') + '</section>';
+  }).join('');
+  document.querySelectorAll('#cats input[data-ind="1"]').forEach(i => i.indeterminate = true);
+}
+$('#cats').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.cat) t.checked ? S.active.add(t.dataset.cat) : S.active.delete(t.dataset.cat);
+  if (t.dataset.uni) CATS.filter(c => c.u === t.dataset.uni).forEach(c => t.checked ? S.active.add(c.id) : S.active.delete(c.id));
+  render();
+});
+$('#cats').addEventListener('click', e => {
+  const b = e.target.closest('[data-go]'); if (!b) return;
+  const x = S.stats.per[b.dataset.go];
+  if (!x || !x.n) return;
+  if (!S.active.has(b.dataset.go)) { S.active.add(b.dataset.go); render(); }
+  const p = x.list[0].p, m = markerById.get(p);
+  if (isMobile()) openSheet(false);
+  if (m && layer.zoomToShowLayer) layer.zoomToShowLayer(m, () => m.openPopup());
+  else { map.setView([p[0], p[1]], Math.max(map.getZoom(), 17)); if (m) m.openPopup(); }
+});
+
+function popupHtml(p, d){
+  const c = CATS[p[2]];
+  const type = TYPE_LABEL[p[4]] || c.one;
+  const route = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${S.center[0].toFixed(5)}%2C${S.center[1].toFixed(5)}%3B${p[0]}%2C${p[1]}`;
+  return `<div class="pop"><div class="pt">${crossSvg(c, 14)}${esc(c.name)}</div><b>${esc(p[3] || type)}</b>${p[3] ? `<div class="ps">${esc(type)}</div>` : ''}<div class="pd">${fmtDist(d)} · 🚶 ${walkMin(d)} min à pied</div><a href="${route}" target="_blank" rel="noopener">Itinéraire à pied ↗</a></div>`;
+}
+function renderMarkers(){
+  layer.clearLayers(); markerById.clear();
+  const ms = [];
+  for (const c of CATS) {
+    if (!S.active.has(c.id)) continue;
+    for (const { p, d } of S.stats.per[c.id].list.slice(0, 400)) {
+      const m = L.marker([p[0], p[1]], { icon: ICONS[c.id], title: p[3] || c.one, riseOnHover: true }).bindPopup(() => popupHtml(p, d));
+      ms.push(m); markerById.set(p, m);
+    }
+  }
+  if (layer.addLayers) layer.addLayers(ms); else ms.forEach(m => layer.addLayer(m));
+}
+
+/* Rayon */
+function renderRadii(){
+  const list = RADII.includes(S.r) ? RADII : [...RADII, S.r].sort((a, b) => a - b);
+  const el = $('#radii');
+  el.classList.toggle('five', list.length > 4);
+  el.innerHTML = list.map(r => `<button type="button" data-r="${r}" aria-pressed="${r === S.r}">${fmtDist(r)}<small>≈ ${walkMin(r)} min</small></button>`).join('');
+}
+$('#radii').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (b) setRadius(+b.dataset.r); });
+function setRadius(r){
+  S.r = r; circle.setRadius(r); aCircle.setRadius(r);
+  renderRadii(); fitView(); return analyze();
+}
+
+/* Packs */
+function renderPacks(){
+  const eq = ids => ids.length === S.active.size && ids.every(id => S.active.has(id));
+  $('#packs').innerHTML = Object.entries(PACKS).map(([k, p]) => `<button type="button" class="chip" data-pack="${k}" aria-pressed="${eq(p.cats)}">${esc(p.name)}</button>`).join('') +
+    `<button type="button" class="chip" data-pack="all" aria-pressed="${S.active.size === CATS.length}">Tout</button>`;
+}
+$('#packs').addEventListener('click', e => {
+  const b = e.target.closest('[data-pack]'); if (!b) return;
+  S.active = new Set(b.dataset.pack === 'all' ? ALL_IDS : PACKS[b.dataset.pack].cats);
+  render();
+});
+
+/* Comparaison A / B */
+function pinA(){
+  if (!S.center) return;
+  S.cmpA = { c: S.center.slice(), label: S.label, places: S.places };
+  aMarker.setLatLng(S.cmpA.c).addTo(map).bindTooltip('A : ' + S.label);
+  aCircle.setLatLng(S.cmpA.c).setRadius(S.r).addTo(map);
+  render();
+}
+function clearA(){ S.cmpA = null; aMarker.remove(); aCircle.remove(); render(); }
+$('#pinBtn').addEventListener('click', () => {
+  pinA();
+  toast('Point A épinglé. Cherchez ou cliquez une autre adresse pour la comparer.');
+  if (!isMobile()) q.focus();
+});
+function renderCompare(){
+  const box = $('#compare');
+  $('#pinBtn').textContent = S.cmpA ? 'Mettre ce point en A' : 'Comparer…';
+  if (!S.cmpA) { box.innerHTML = ''; return; }
+  const A = computeStats(S.cmpA.c, S.r, S.cmpA.places || [], S.active), B = S.stats;
+  const same = dist(S.cmpA.c, S.center) < 30;
+  const cell = (x, o) => {
+    const t = x.n ? `${x.n} · ${walkMin(x.d)} min` : '–';
+    const win = x.n && (!o.n || x.d < o.d - 1);
+    return `<td class="${win ? 'win' : ''}">${t}</td>`;
+  };
+  const rows = CATS.filter(c => S.active.has(c.id)).map(c => `<tr><td>${esc(c.name)}</td>${cell(A.per[c.id], B.per[c.id])}${cell(B.per[c.id], A.per[c.id])}</tr>`).join('');
+  const sa = A.score ?? 0, sb = B.score ?? 0;
+  box.innerHTML = `<div class="cmp"><h3>Comparaison de deux adresses</h3>
+    <p class="hint" style="margin:0 0 8px"><b>A</b> : ${esc(S.cmpA.label)}<br><b>B</b> : ${same ? 'choisissez une autre adresse' : esc(S.label)}</p>
+    <table><thead><tr><th>Catégorie</th><th>A</th><th>B</th></tr></thead><tbody>
+    <tr class="tot"><td>Score /100</td><td class="${sa > sb ? 'win' : ''}">${A.score ?? '–'}</td><td class="${sb > sa ? 'win' : ''}">${same ? '–' : B.score ?? '–'}</td></tr>
+    ${same ? '' : rows}</tbody></table>
+    <p class="hint" style="margin:6px 0 0">Nombre de lieux · temps de marche vers le plus proche.</p>
+    <div class="btns"><button type="button" class="btn sm" id="swapA">Échanger A et B</button><button type="button" class="btn sm" id="clearA">Fermer</button></div></div>`;
+  $('#clearA').onclick = clearA;
+  $('#swapA').onclick = () => {
+    if (same) return;
+    const a = S.cmpA, b = { c: S.center.slice(), label: S.label, places: S.places };
+    S.cmpA = b; aMarker.setLatLng(b.c).setTooltipContent('A : ' + b.label); aCircle.setLatLng(b.c);
+    q.value = a.label; setCenter(a.c, a.label);
+  };
+}
+
+/* Lien partageable */
+function readHash(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  const lat = parseFloat(h.get('lat')), lon = parseFloat(h.get('lon'));
+  const r = parseInt(h.get('r'), 10);
+  const cats = h.get('c') ? h.get('c').split(',').filter(id => CAT[id]) : null;
+  return { c: isFinite(lat) && isFinite(lon) ? [lat, lon] : null, r: r >= 200 && r <= MAX_R ? r : null, cats, label: h.get('a') || '' };
+}
+function hashStr(){
+  const h = new URLSearchParams({ lat: S.center[0].toFixed(5), lon: S.center[1].toFixed(5), r: S.r, c: [...S.active].join(',') });
+  if (S.label) h.set('a', S.label.slice(0, 120));
+  return h.toString();
+}
+function writeHash(){ if (S.center) try { history.replaceState(null, '', '#' + hashStr()); } catch {} }
+$('#shareBtn').addEventListener('click', async () => {
+  const base = servedOverHttp && !NATIVE ? location.href.split('#')[0] : SITE_URL;
+  const url = base ? base + '#' + hashStr() : '';
+  const share = nativePlugin('Share');
+  try {
+    if (share) {
+      const sc = S.stats && S.stats.score != null ? ` : ${S.stats.score}/100` : '';
+      await share.share({ title: 'CheckMap : ' + S.label, text: `CheckMap, ${S.label}${sc}`, url: url || undefined }); return;
+    }
+    if (navigator.share && isMobile()) { await navigator.share({ title: 'CheckMap : ' + S.label, url }); return; }
+    await navigator.clipboard.writeText(url); toast('Lien copié dans le presse-papiers.');
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    q.value = url; q.select(); toast('Copiez le lien affiché dans la barre de recherche.');
+  }
+});
+
+/* Feuille mobile */
+function openSheet(open){ $('#panel').classList.toggle('open', open); }
+$('#grab').addEventListener('click', () => openSheet(!$('#panel').classList.contains('open')));
+{
+  let y0 = null;
+  const g = $('#grab');
+  g.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+  g.addEventListener('touchend', e => {
+    if (y0 == null) return;
+    const dy = e.changedTouches[0].clientY - y0; y0 = null;
+    if (Math.abs(dy) > 30) openSheet(dy < 0);
+  });
+}
+
+/* ============================================================
+   Bulle assistant
+   ============================================================ */
+const msgs = $('#msgs'), ask = $('#ask');
+const EXAMPLES = [
+  'Je veux habiter ici, je veux connaître les écoles, les transports en commun proches, etc.',
+  'Vie de famille avec enfants à 10 min à pied près de la place de la Bastille, Paris',
+  'Ajoute les bornes électriques et les pharmacies',
+  'Sans voiture, tout à 15 min à pied',
+  'Retire les restaurants',
+  'Compare avec 20 rue de la République, Lyon'
+];
+$('#sugs').innerHTML = EXAMPLES.map(t => `<button type="button" title="${esc(t)}">${esc(t)}</button>`).join('');
+$('#sugs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) send(b.title); });
+function openChat(open){
+  $('#chat').hidden = !open; $('#fab').hidden = open;
+  $('#fab').setAttribute('aria-expanded', String(open));
+  if (open) { if (!msgs.children.length) welcome(); setTimeout(() => ask.focus(), 50); }
+}
+$('#fab').addEventListener('click', () => openChat(true));
+$('#chatClose').addEventListener('click', () => openChat(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#chat').hidden) openChat(false); });
+function addMsg(html, who){
+  const d = document.createElement('div');
+  d.className = 'm ' + who; d.innerHTML = html;
+  msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight; return d;
+}
+function welcome(){
+  addMsg(`<p>Bonjour ! Décrivez votre projet de vie et je prépare la carte : adresse, temps de marche, besoins (famille, sans voiture, senior…).</p><p>Vos phrases sont analysées directement sur l'appareil : rien n'est envoyé à un serveur.</p>`, 'b');
+}
+ask.addEventListener('input', () => { ask.style.height = 'auto'; ask.style.height = Math.min(120, ask.scrollHeight) + 'px'; });
+ask.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#chatForm').requestSubmit(); } });
+$('#chatForm').addEventListener('submit', e => { e.preventDefault(); const v = ask.value.trim(); if (v) { ask.value = ''; ask.style.height = ''; send(v); } });
+
+function bilanHtml(){
+  const st = S.stats; if (!st) return '';
+  const [l] = scoreLabel(st.score);
+  const act = CATS.filter(c => S.active.has(c.id));
+  const items = act.map(c => {
+    const x = st.per[c.id];
+    return `<li style="--c:${c.color}"><i></i><div><b>${esc(c.name)}</b> : ${x.n ? `${x.n} lieu${x.n > 1 ? 'x' : ''}<br><span>🚶 ${walkMin(x.d)} min à pied vers le plus proche (${fmtDist(x.d)})</span>` : '<span>aucun dans le rayon</span>'}</div></li>`;
+  }).join('');
+  const ranked = act.map(c => ({ c, s: st.per[c.id].s })).sort((a, b) => b.s - a.s);
+  const strong = ranked.filter(x => x.s >= 0.75).slice(0, 3).map(x => x.c.name.toLowerCase());
+  const weak = ranked.filter(x => x.s < 0.4).reverse().slice(0, 3).map(x => x.c.name.toLowerCase());
+  return `<div class="bilan"><div class="hd"><strong>${st.score ?? '–'}</strong><span>/100 · <b>${esc(l)}</b></span></div>
+    <p style="margin:4px 0 0">${esc(S.label)}<br>Rayon ${fmtDist(S.r)}, soit ≈ ${walkMin(S.r)} min à pied.</p>
+    ${strong.length ? `<p style="margin:6px 0 0"><b>Points forts</b> : ${esc(strong.join(', '))}.</p>` : ''}
+    ${weak.length ? `<p style="margin:4px 0 0"><b>À surveiller</b> : ${esc(weak.join(', '))}.</p>` : ''}
+    <ul>${items}</ul></div>`;
+}
+
+let busy = false;
+async function send(text){
+  if (busy) return;
+  busy = true;
+  addMsg(esc(text), 'u');
+  const wait = addMsg('<span class="typing"><span></span><span></span><span></span></span>', 'b');
+  try {
+    const plan = parseQuery(text, [...S.active]);
+    const tags = [];
+    const asksBilan = /\b(score|bilan|resume|note|alors|et (alors|donc)|ca donne quoi)\b/.test(norm(text));
+    if (!plan.understood && !asksBilan) {
+      wait.innerHTML = `<p>Je n'ai pas reconnu de besoin, d'adresse ou de distance dans votre phrase.</p><p>Essayez par exemple : « écoles et parcs à 10 min à pied près de la gare de Nantes », « ajoute les pharmacies », « sans voiture ».</p>`;
+      return;
+    }
+    if (plan.compare && S.center && plan.address) { pinA(); tags.push('Comparaison A / B'); }
+    if (plan.radius) { S.r = plan.radius.r; circle.setRadius(S.r); aCircle.setRadius(S.r); tags.push(`Rayon ${fmtDist(S.r)} ≈ ${walkMin(S.r)} min`); }
+    if (plan.cats) S.active = new Set(plan.cats);
+    plan.packs.forEach(p => tags.push('Pack ' + PACKS[p].name));
+    if (plan.cats && !plan.packs.length && plan.mentioned.length) tags.push((ADD_RE.test(norm(text)) ? '+ ' : '') + plan.mentioned.map(id => CAT[id].name).join(', '));
+    if (plan.removed.length) tags.push('− ' + plan.removed.map(id => CAT[id].name).join(', '));
+
+    let moved = false, notFound = null;
+    if (plan.address) {
+      const g = await geocode(plan.address);
+      if (g) { tags.push('📍 ' + g.label); q.value = g.label; await setCenter(g.c, g.label); moved = true; }
+      else notFound = plan.address;
+    } else if (plan.geo) {
+      tags.push('📍 Ma position'); moved = await locate();
+    }
+    if (!moved) { renderRadii(); if (plan.radius) fitView(); await analyze(); }
+
+    const intro = plan.packs.length
+      ? `J'ai compris un projet « ${esc(plan.packs.map(p => PACKS[p].name.toLowerCase()).join(' + '))} » et activé les catégories utiles.`
+      : plan.cats ? 'C\'est noté, la carte est à jour.' : 'Voici le bilan du quartier.';
+    wait.innerHTML = `<p>${intro}</p>${tags.length ? `<div class="tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}` +
+      (notFound ? `<p>Je n'ai pas trouvé l'adresse « ${esc(notFound)} ». J'analyse le point actuel.</p>` : '') +
+      ($('#err').hidden ? bilanHtml() : '<p>Les données du quartier n\'ont pas pu être chargées (serveurs indisponibles). Réessayez dans un instant.</p>');
+    if (plan.compare && S.cmpA) wait.innerHTML += '<p style="margin-top:6px">Le tableau de comparaison A / B est dans le panneau.</p>';
+  } catch (e) {
+    wait.innerHTML = '<p>Une erreur est survenue pendant l\'analyse. Réessayez.</p>';
+  } finally {
+    busy = false; msgs.scrollTop = msgs.scrollHeight;
+  }
+}
+
+/* ============================================================
+   Stockage local (IndexedDB) : favoris, historique, photos
+   ============================================================ */
+const DB = (() => {
+  let ready = null;
+  const open = () => ready || (ready = new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error('Stockage indisponible'));
+    const rq = indexedDB.open('checkmap', 1);
+    rq.onupgradeneeded = () => { const d = rq.result; ['favs', 'history', 'photos'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: 'id' }); }); };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  }));
+  const run = async (store, mode, fn) => {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, mode), r = fn(t.objectStore(store));
+      t.oncomplete = () => res(r ? r.result : undefined);
+      t.onerror = () => rej(t.error);
+    });
+  };
+  return {
+    all: s => run(s, 'readonly', st => st.getAll()).catch(() => []),
+    get: (s, id) => run(s, 'readonly', st => st.get(id)).catch(() => null),
+    put: (s, v) => run(s, 'readwrite', st => st.put(v)),
+    del: (s, id) => run(s, 'readwrite', st => st.delete(id))
+  };
+})();
+const placeKey = c => c[0].toFixed(4) + ',' + c[1].toFixed(4);
+const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtMin = m => m < 60 ? Math.max(1, Math.round(m)) + ' min' : Math.floor(m / 60) + ' h ' + String(Math.round(m % 60)).padStart(2, '0');
+const fmtEur = v => Math.round(v).toLocaleString('fr-FR') + ' €';
+
+function snapshot(){
+  const st = S.stats;
+  return {
+    key: placeKey(S.center), c: S.center.slice(), label: S.label, r: S.r, active: [...S.active],
+    score: S.failed || !st ? null : st.score,
+    cats: st ? CATS.filter(c => S.active.has(c.id)).map(c => ({ id: c.id, n: st.per[c.id].n, d: st.per[c.id].d, band: st.per[c.id].band || null })) : [],
+    q15: S.q15 && S.q15.key === placeKey(S.center) ? { ok: S.q15.ok, total: S.q15.total } : null,
+    fiche: S.fiche && S.fiche.key === placeKey(S.center) ? { risks: S.fiche.risks, price: S.fiche.price, lines: S.fiche.lines, freq: S.fiche.freq && { perHour: S.fiche.freq.perHour, routes: S.fiche.freq.routes.slice(0, 12) }, url: S.fiche.url } : null,
+    trips: S.trips && S.trips.key === placeKey(S.center) ? S.trips.rows : [],
+    ts: Date.now()
+  };
+}
+
+// Widget iOS « Mon quartier » et Siri : résumé du dernier quartier analysé
+function saveWidget(snap){
+  const p = nativePlugin('MonQuartier'); if (!p || snap.score == null) return;
+  const cats = snap.cats.filter(c => c.n && CAT[c.id]).sort((a, b) => CAT[b.id].w - CAT[a.id].w || a.d - b.d).slice(0, 4)
+    .map(c => ({ nom: CAT[c.id].name, minutes: Math.round(c.band || walkMin(c.d)), nombre: c.n }));
+  const fq = snap.fiche && snap.fiche.freq;
+  const q = { label: snap.label || 'Point sur la carte', score: Math.round(snap.score), verdict: scoreLabel(snap.score)[0], rayon: snap.r, date: snap.ts, categories: cats, transports: fq ? freqLevel(fq.perHour) : null };
+  p.enregistrer({ json: JSON.stringify(q) }).catch(() => {});
+}
+
+/* Historique : chaque adresse analysée est gardée (40 maximum) */
+let histT;
+function saveHistory(){
+  clearTimeout(histT);
+  histT = setTimeout(async () => {
+    if (!S.center || S.failed) return;
+    const snap = snapshot();
+    saveWidget(snap);
+    try {
+      await DB.put('history', { id: snap.key, ...snap });
+      const all = await DB.all('history');
+      if (all.length > 40) for (const h of all.sort((a, b) => b.ts - a.ts).slice(40)) await DB.del('history', h.id);
+    } catch {}
+  }, 1500);
+}
+
+/* ============================================================
+   Mes lieux importants : temps de trajet (OSRM, estimation à vol d'oiseau en secours)
+   ============================================================ */
+const KINDS = {
+  travail: { name: 'Travail', letter: 'T', color: '#0077b6' },
+  ecole:   { name: 'École',   letter: 'É', color: '#2a6fdb' },
+  famille: { name: 'Famille', letter: 'F', color: '#e0245e' },
+  sport:   { name: 'Loisirs', letter: 'L', color: '#0e8f97' },
+  autre:   { name: 'Autre',   letter: '★', color: '#6b4fd8' }
+};
+const MODES = [
+  { id: 'foot', name: 'À pied', osrm: 'routed-foot', est: d => d * 1.3 / WALK_MPM },
+  { id: 'bike', name: 'Vélo',   osrm: 'routed-bike', est: d => d * 1.3 / 250 },
+  { id: 'car',  name: 'Voiture', osrm: 'routed-car', est: d => 3 + d * 1.4 / 420 }
+];
+let myPlaces = store.get('cm:places', []);
+const placesLayer = L.layerGroup().addTo(map);
+function drawMyPlaces(){
+  placesLayer.clearLayers();
+  for (const p of myPlaces) {
+    const k = KINDS[p.kind] || KINDS.autre;
+    L.marker(p.c, { icon: L.divIcon({ className: 'mp', html: `<span style="--k:${k.color}">${k.letter}</span>`, iconSize: [30, 30], iconAnchor: [15, 15] }), title: p.name, zIndexOffset: 800 })
+      .bindTooltip(esc(p.name)).addTo(placesLayer);
+  }
+}
+async function computeTrips(){
+  if (!S.center) return;
+  const key = placeKey(S.center), sig = key + '|' + myPlaces.map(p => p.id).join(',');
+  if (!myPlaces.length) { S.trips = { key, sig, rows: [] }; renderTrips(); return; }
+  if (S.trips && S.trips.sig === sig && !S.trips.loading) { renderTrips(); return; }
+  const rows = myPlaces.map(p => ({ id: p.id, name: p.name, kind: p.kind, d: dist(S.center, p.c), t: {}, est: {} }));
+  S.trips = { key, sig, rows, loading: true }; renderTrips();
+  const coords = [S.center, ...myPlaces.map(p => p.c)].map(c => `${c[1].toFixed(6)},${c[0].toFixed(6)}`).join(';');
+  await Promise.all(MODES.map(async m => {
+    try {
+      const j = await fetchJSON(`https://routing.openstreetmap.de/${m.osrm}/table/v1/driving/${coords}?sources=0&annotations=duration,distance`, {}, 15000);
+      if (j.code !== 'Ok') throw new Error(j.code);
+      rows.forEach((r, i) => { const s = j.durations[0][i + 1]; if (s != null) r.t[m.id] = s / 60; else { r.t[m.id] = m.est(r.d); r.est[m.id] = true; } });
+    } catch { rows.forEach(r => { r.t[m.id] = m.est(r.d); r.est[m.id] = true; }); }
+  }));
+  if (!S.trips || S.trips.sig !== sig) return;
+  S.trips.loading = false; renderTrips(); saveHistory();
+}
+function tripLine(r){
+  return MODES.map(m => r.t[m.id] == null ? `<span>${m.name} …</span>` : `<span>${m.name} <b>${r.est[m.id] ? '≈ ' : ''}${fmtMin(r.t[m.id])}</b></span>`).join('');
+}
+function renderTrips(){
+  const box = $('#trips');
+  if (!myPlaces.length) {
+    box.innerHTML = '<p class="hint">Ajoutez votre travail, l\'école des enfants ou la famille : chaque adresse testée affichera le temps de trajet vers ces lieux.</p>';
+    return;
+  }
+  const rows = (S.trips && S.trips.rows) || [];
+  box.innerHTML = myPlaces.map(p => {
+    const k = KINDS[p.kind] || KINDS.autre, r = rows.find(x => x.id === p.id) || { t: {}, est: {} };
+    return `<div class="trip"><span class="tk" style="--k:${k.color}">${k.letter}</span><div class="tm"><b>${esc(p.name)}</b><div class="tt">${tripLine(r)}</div></div><button type="button" class="x" data-del-place="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button></div>`;
+  }).join('') + '<p class="hint" style="margin:6px 0 0">Trajets calculés sur le réseau routier OpenStreetMap, hors trafic. Transports en commun : bientôt.</p>';
+}
+$('#trips').addEventListener('click', e => {
+  const b = e.target.closest('[data-del-place]'); if (!b) return;
+  myPlaces = myPlaces.filter(p => p.id !== b.dataset.delPlace);
+  store.set('cm:places', myPlaces); drawMyPlaces(); computeTrips();
+});
+let placeKind = 'travail';
+$('#placeKinds').innerHTML = Object.entries(KINDS).map(([k, v]) => `<button type="button" class="chip" data-kind="${k}" aria-pressed="${k === placeKind}">${v.name}</button>`).join('');
+$('#placeKinds').addEventListener('click', e => {
+  const b = e.target.closest('[data-kind]'); if (!b) return;
+  placeKind = b.dataset.kind;
+  $('#placeKinds').querySelectorAll('[data-kind]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  if (!$('#placeName').value || Object.values(KINDS).some(k => k.name === $('#placeName').value)) $('#placeName').value = KINDS[placeKind].name;
+});
+$('#addPlaceBtn').addEventListener('click', () => {
+  if (myPlaces.length >= 6) return toast('6 lieux maximum. Retirez-en un pour en ajouter un autre.');
+  $('#placeForm').hidden = false; $('#placeName').value = KINDS[placeKind].name; $('#placeAddr').focus();
+});
+$('#placeCancel').addEventListener('click', () => { $('#placeForm').hidden = true; $('#placeForm').reset(); });
+$('#placeForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const addr = $('#placeAddr').value.trim(); if (!addr) return;
+  const btn = $('#placeForm').querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Recherche…';
+  const g = await geocode(addr);
+  btn.disabled = false; btn.textContent = 'Enregistrer';
+  if (!g) return toast('Adresse introuvable. Ajoutez la ville ou le code postal.');
+  myPlaces.push({ id: 'p' + Date.now().toString(36), kind: placeKind, name: ($('#placeName').value.trim() || KINDS[placeKind].name).slice(0, 40), c: g.c, label: g.label });
+  store.set('cm:places', myPlaces);
+  $('#placeForm').hidden = true; $('#placeForm').reset();
+  drawMyPlaces(); computeTrips(); toast('Lieu ajouté : ' + g.label);
+});
+
+/* ============================================================
+   Fiche de l'adresse : risques (Géorisques), prix (DVF, Cerema), lignes de transport (OSM)
+   ============================================================ */
+const RISK_KEYS = { inondation: 'Inondation', remonteeNappe: 'Remontée de nappe', retraitGonflementArgile: 'Argiles (retrait-gonflement)', radon: 'Radon', pollutionSols: 'Sols pollués', mouvementTerrain: 'Mouvements de terrain', seisme: 'Séisme', feuForet: 'Feu de forêt', risqueCotier: 'Submersion marine', reculTraitCote: 'Recul du trait de côte', cyclone: 'Vent violent', avalanche: 'Avalanche', eruptionVolcanique: 'Volcan', icpe: 'Sites industriels (ICPE)', nucleaire: 'Nucléaire', canalisationsMatieresDangereuses: 'Canalisations dangereuses', ruptureBarrage: 'Rupture de barrage', risqueMinier: 'Risque minier' };
+const MAIN_RISKS = ['inondation', 'retraitGonflementArgile', 'radon', 'pollutionSols'];
+const RANK = [0, 1, 3, 4, 2];
+function riskLevel(txt){
+  const t = norm(txt || '');
+  if (!t || /non connu|inconnu|non concern/.test(t)) return 0;
+  if (/fort|important|eleve|significatif|3/.test(t)) return 3;
+  if (/moyen|modere|2/.test(t)) return 2;
+  if (/faible|1/.test(t)) return 1;
+  return 4;
+}
+async function loadRisks(c){
+  const j = await fetchJSON(`https://georisques.gouv.fr/api/v1/resultats_rapport_risque?latlon=${c[1].toFixed(6)},${c[0].toFixed(6)}`, {}, 20000);
+  const all = { ...(j.risquesNaturels || {}), ...(j.risquesTechnologiques || {}) };
+  const risks = Object.entries(all).filter(([k, v]) => v && (v.present || MAIN_RISKS.includes(k))).map(([k, v]) => {
+    const st = v.libelleStatutAdresse || v.libelleStatutCommune || (v.present ? 'Risque présent dans la commune' : 'Non concerné');
+    return { k, name: RISK_KEYS[k] || v.libelle, status: st, level: v.present ? riskLevel(st) : 0, main: MAIN_RISKS.includes(k) };
+  }).sort((a, b) => (b.main - a.main) || (RANK[b.level] - RANK[a.level]));
+  return { risks, url: j.url || 'https://www.georisques.gouv.fr/' };
+}
+const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+async function loadPrices(c){
+  const ck = 'cm:dvf:' + c[0].toFixed(3) + ',' + c[1].toFixed(3), hit = store.get(ck, null);
+  if (hit && Date.now() - hit.ts < 7 * 864e5) return hit.v;
+  const dLat = 0.0036, dLon = 0.0036 / Math.cos(c[0] * Math.PI / 180), y0 = new Date().getFullYear() - 3;
+  const bbox = [c[1] - dLon, c[0] - dLat, c[1] + dLon, c[0] + dLat].map(v => v.toFixed(5)).join(',');
+  const j = await fetchJSON(`https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=${bbox}&anneemut_min=${y0}&codtypbien=111,121&page_size=300`, {}, 45000);
+  const g = { appart: [], maison: [] };
+  for (const f of j.features || []) {
+    const p = f.properties || {}, v = +p.valeurfonc, sb = +p.sbati;
+    if (p.libnatmut !== 'Vente' || +p.nblocmut !== 1 || !(sb >= 9) || !(v > 1000)) continue;
+    const ppm = v / sb; if (ppm < 300 || ppm > 40000) continue;
+    (String(p.codtypbien) === '121' ? g.appart : g.maison).push(ppm);
+  }
+  const v = { appart: median(g.appart), nA: g.appart.length, maison: median(g.maison), nM: g.maison.length, from: y0, total: j.count || 0 };
+  store.set(ck, { ts: Date.now(), v });
+  return v;
+}
+const LINE_MODES = { subway: 'Métro', tram: 'Tram', light_rail: 'Train', train: 'Train', bus: 'Bus', trolleybus: 'Bus' };
+async function loadLines(c){
+  const a = `(around:400,${c[0].toFixed(6)},${c[1].toFixed(6)})`;
+  const j = await overpass(`[out:json][timeout:25];(node${a}[highway=bus_stop];node${a}[public_transport~"^(platform|stop_position)$"];node${a}[railway~"^(tram_stop|station|halt|stop|subway_entrance)$"];)->.s;rel(bn.s)[type=route][route~"^(bus|trolleybus|tram|subway|train|light_rail)$"];out tags;`);
+  const m = {};
+  for (const e of j.elements) {
+    const mode = LINE_MODES[e.tags.route]; if (!mode) continue;
+    (m[mode] = m[mode] || new Set()).add((e.tags.ref || e.tags.name || '?').slice(0, 14));
+  }
+  const order = ['Métro', 'Train', 'Tram', 'Bus'];
+  return order.filter(k => m[k]).map(k => ({ mode: k, refs: [...m[k]].sort((x, y) => x.localeCompare(y, 'fr', { numeric: true })) }));
+}
+const FREQ_MODES = { 1: 'Métro', 2: 'Train', 0: 'Tram', 3: 'Bus', 4: 'Bateau', 6: 'Câble' };
+const FREQ_ORDER = [1, 2, 0, 3, 4, 6];
+const freqTiles = new Map();
+let freqBaseP = null;
+function freqBase(){
+  if (!freqBaseP) {
+    const site = servedOverHttp && !NATIVE ? location.href : SITE_URL && (/\.html?$/.test(SITE_URL) ? SITE_URL : SITE_URL.replace(/\/?$/, '/'));
+    const url = (FREQ_URL || (site ? new URL('freq/', site).href : '')).replace(/\/?$/, '');
+    // 404 : pas de fichiers de fréquence ici (on ne redemande pas) ; erreur réseau : nouvel essai plus tard
+    freqBaseP = !url ? Promise.resolve(null) : fetchJSON(url + '/index.json', {}, 8000).then(() => url, e => { if (!e.status) freqBaseP = null; return null; });
+  }
+  return freqBaseP;
+}
+function freqTile(base, key){
+  if (!freqTiles.has(key)) {
+    const p = fetchJSON(`${base}/t/${key}.json`, {}, 12000).then(j => j.s || [], e => { if (e.status === 404) return []; throw e; });
+    freqTiles.set(key, p);
+    p.catch(() => freqTiles.delete(key));
+  }
+  return freqTiles.get(key);
+}
+// Lignes à moins de 400 m (800 m pour métro et train) ; pour chaque ligne, l'arrêt le mieux desservi.
+async function loadFreq(c){
+  const T = 0.05, dLat = 0.0075, dLon = 0.0075 / Math.cos(c[0] * Math.PI / 180), keys = new Set();
+  for (const la of [c[0] - dLat, c[0] + dLat]) for (const lo of [c[1] - dLon, c[1] + dLon]) keys.add(Math.floor(la / T) + '_' + Math.floor(lo / T));
+  const base = await freqBase(); if (!base) return null;
+  const tiles = await Promise.all([...keys].map(k => freqTile(base, k)));
+  const best = new Map();
+  for (const s of tiles.flat()) {
+    const d = dist(c, [s[0], s[1]]);
+    for (const r of s[3]) {
+      if (d > (r[1] === 1 || r[1] === 2 ? 800 : 400)) continue;
+      const k = r[1] + '|' + r[0], o = best.get(k);
+      if (!o || r[4] > o.peak || (r[4] === o.peak && r[3] > o.day)) best.set(k, { name: r[0], mode: r[1], color: r[2], day: r[3], peak: r[4], mid: r[5], first: r[6], last: r[7], stop: s[2], d: Math.round(d) });
+    }
+  }
+  const routes = [...best.values()].sort((a, b) => FREQ_ORDER.indexOf(a.mode) - FREQ_ORDER.indexOf(b.mode) || b.peak - a.peak || b.day - a.day);
+  return { routes, perHour: Math.round(routes.reduce((n, r) => n + r.peak / 2, 0)), covered: tiles.some(t => t.length) };
+}
+const freqLevel = h => h >= 60 ? 'Excellente desserte' : h >= 25 ? 'Très bonne desserte' : h >= 10 ? 'Bonne desserte' : h >= 4 ? 'Desserte moyenne' : h > 0 ? 'Desserte faible' : 'Pas de passage aux heures de pointe';
+const hhmm = m => `${Math.floor(m / 60) % 24}h${String(m % 60).padStart(2, '0')}`;
+const every = r => r.peak ? `toutes les ${Math.max(1, Math.round(120 / r.peak))} min` : r.mid ? `toutes les ${Math.round(360 / r.mid)} min en journée` : `${r.day} passage${r.day > 1 ? 's' : ''} par jour`;
+const inkOn = hex => { const n = parseInt(hex.slice(1), 16); return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 150 ? '#13242e' : '#fff'; };
+function freqHtml(fq){
+  if (!fq.routes.length) return '<p class="hint">Aucune ligne régulière à moins de 400 m.</p>';
+  const shown = fq.routes.slice(0, 10), more = fq.routes.length - shown.length;
+  return `<div class="fq"><b>${freqLevel(fq.perHour)}</b><small>≈ ${fq.perHour} passages par heure entre 7 h et 9 h</small></div>` +
+    shown.map(r => `<div class="ln"><span class="lm"${r.color ? ` style="background:${r.color};color:${inkOn(r.color)}"` : ''} title="${FREQ_MODES[r.mode]}">${esc(r.name.length > 7 ? FREQ_MODES[r.mode] : r.name)}</span><span><b>${FREQ_MODES[r.mode]}${r.name.length > 7 ? ' ' + esc(r.name) : ''}</b> · ${every(r)}${r.peak ? ' (7h-9h)' : ''} · ${hhmm(r.first)}-${hhmm(r.last)}<small>${esc(r.stop)}, ${fmtDist(r.d)} · ${r.day} passages par jour</small></span></div>`).join('') +
+    (more > 0 ? `<p class="hint" style="margin:4px 0 0">+ ${more} autre${more > 1 ? 's' : ''} ligne${more > 1 ? 's' : ''}.</p>` : '') +
+    '<p class="hint" style="margin:4px 0 0">Horaires théoriques d\'un jour de semaine (transport.data.gouv.fr), sens le plus fréquent.</p>';
+}
+async function loadFiche(){
+  if (!S.center) return;
+  const c = S.center.slice(), key = placeKey(c);
+  if (S.fiche && S.fiche.key === key) return renderFiche();
+  const f = S.fiche = { key, risks: null, price: null, lines: null, freq: null, url: null, err: {} };
+  renderFiche();
+  const done = () => { if (S.fiche === f) { renderFiche(); saveHistory(); } };
+  loadRisks(c).then(r => { f.risks = r.risks; f.url = r.url; }).catch(() => { f.err.risks = true; }).finally(done);
+  loadPrices(c).then(v => { f.price = v; }).catch(() => { f.err.price = true; }).finally(done);
+  loadFreq(c).catch(() => null)
+    .then(fq => { if (fq && fq.covered) f.freq = fq; else return loadLines(c).then(v => { f.lines = v; }); })
+    .catch(() => { f.err.lines = true; }).finally(done);
+}
+const LVL = ['Non concerné', 'Faible', 'Moyen', 'Fort', 'Présent'];
+function renderFiche(){
+  const f = S.fiche, box = $('#fiche'); if (!f) return;
+  const wait = t => `<p class="hint"><span class="spin sm"></span> ${t}</p>`;
+  let risks;
+  if (f.risks) {
+    const shown = f.risks.filter(r => r.main || r.level > 0).slice(0, 8);
+    risks = `<ul class="risks">${shown.map(r => `<li><span class="lv l${r.level}">${LVL[r.level]}</span><b>${esc(r.name)}</b><small>${esc(r.status)}</small></li>`).join('')}</ul>
+      <a class="more" href="${esc(f.url)}" target="_blank" rel="noopener">Rapport officiel Géorisques ↗</a>`;
+  } else risks = f.err.risks ? '<p class="hint">Géorisques ne répond pas pour le moment.</p>' : wait('Interrogation de Géorisques…');
+  let price;
+  if (f.price) {
+    const p = f.price, row = (n, v, k) => `<div class="pr"><span>${n}</span><b>${v ? fmtEur(v) + '/m²' : '—'}</b><small>${k} vente${k > 1 ? 's' : ''}</small></div>`;
+    price = (p.nA || p.nM) ? row('Appartements', p.appart, p.nA) + row('Maisons', p.maison, p.nM) + `<p class="hint" style="margin:4px 0 0">Prix médian des ventes depuis ${p.from}, à environ 400 m (DVF).</p>`
+      : '<p class="hint">Pas assez de ventes récentes autour de ce point (ou zone non couverte par DVF : Alsace, Moselle, Mayotte).</p>';
+  } else price = f.err.price ? '<p class="hint">Le service DVF ne répond pas pour le moment.</p>' : wait('Calcul des prix de vente (service public parfois lent)…');
+  let lines;
+  if (f.freq) lines = freqHtml(f.freq);
+  else if (f.lines) lines = f.lines.length ? f.lines.map(l => `<div class="ln"><span class="lm">${l.mode}</span><span>${l.mode === 'Bus' && l.refs.length > 8 ? l.refs.length + ' lignes' : esc(l.refs.join(' · '))}</span></div>`).join('') + '<p class="hint" style="margin:4px 0 0">Lignes qui s\'arrêtent à moins de 400 m.</p>'
+    : '<p class="hint">Aucune ligne de transport en commun à moins de 400 m.</p>';
+  else lines = f.err.lines ? '<p class="hint">Lignes indisponibles (serveurs OpenStreetMap saturés).</p>' : wait('Recherche des lignes desservies…');
+  box.innerHTML = `<h3>Risques à l'adresse</h3>${risks}<h3>Prix au m²</h3>${price}<h3>Transports en commun</h3>${lines}`;
+}
+
+/* ============================================================
+   Isochrones piétonnes 5 / 10 / 15 min (Valhalla)
+   ============================================================ */
+const isoLayer = L.layerGroup().addTo(map);
+let showIso = store.get('cm:iso', true);
+const ISO_STYLE = { 5: '#00a8c6', 10: '#ff7a1a', 15: '#ff2d7a' };
+function pip(lon, lat, geom){
+  const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+  for (const rings of polys) {
+    let inside = false;
+    rings.forEach((ring, ri) => {
+      let inRing = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i], [xj, yj] = ring[j];
+        if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inRing = !inRing;
+      }
+      if (inRing) inside = ri === 0 ? true : false;
+    });
+    if (inside) return true;
+  }
+  return false;
+}
+async function loadIso(){
+  if (!S.center) return;
+  const c = S.center.slice(), key = placeKey(c);
+  if (S.iso && S.iso.key === key) return drawIso();
+  S.iso = { key, feats: null };
+  try {
+    const q = { locations: [{ lat: c[0], lon: c[1] }], costing: 'pedestrian', contours: [{ time: 5 }, { time: 10 }, { time: 15 }], polygons: true, denoise: 0.6, generalize: 30 };
+    const j = await fetchJSON('https://valhalla1.openstreetmap.de/isochrone?json=' + encodeURIComponent(JSON.stringify(q)), {}, 15000);
+    if (!S.iso || S.iso.key !== key) return;
+    S.iso.feats = {};
+    for (const f of j.features || []) S.iso.feats[Math.round(f.properties.contour)] = f.geometry;
+  } catch { if (S.iso && S.iso.key === key) S.iso.failed = true; }
+  drawIso(); render();
+}
+function drawIso(){
+  isoLayer.clearLayers();
+  if (!showIso || !S.iso || !S.iso.feats) return;
+  for (const t of [15, 10, 5]) {
+    const g = S.iso.feats[t]; if (!g) continue;
+    L.geoJSON(g, { interactive: false, style: { color: ISO_STYLE[t], weight: 2, opacity: .9, fillColor: ISO_STYLE[t], fillOpacity: .06, dashArray: t === 15 ? null : '4 5' } }).addTo(isoLayer);
+  }
+}
+// Après le calcul des statistiques : temps réels par catégorie et « Score 15 minutes »
+function applyIso(st){
+  S.q15 = null;
+  if (!S.iso || !S.iso.feats || S.iso.key !== placeKey(S.center) || !st) return;
+  const F = S.iso.feats; let ok = 0, total = 0;
+  for (const c of CATS) {
+    const x = st.per[c.id]; x.band = null;
+    for (const { p } of x.list.slice(0, 40)) {
+      const band = [5, 10, 15].find(t => F[t] && pip(p[1], p[0], F[t]));
+      if (band && (!x.band || band < x.band)) x.band = band;
+      if (x.band === 5) break;
+    }
+    if (S.active.has(c.id)) { total++; if (x.band) ok++; }
+  }
+  S.q15 = { key: S.iso.key, ok, total };
+}
+function renderQ15(){
+  const el = $('#q15');
+  if (!S.q15 || !S.q15.total || S.failed || S.pending) { el.hidden = true; return; }
+  const { ok, total } = S.q15, pct = ok / total;
+  el.hidden = false;
+  el.innerHTML = `<div class="q15b ${pct >= .8 ? 'top' : ''}"><strong>${ok}/${total}</strong><span><b>Score 15 minutes</b>${pct >= .8 ? ' · Quartier du quart d\'heure' : ''}<br><small>besoins accessibles en moins de 15 min à pied, sur le réseau piéton réel</small></span></div>
+    <label class="tog"><input type="checkbox" id="isoTog" ${showIso ? 'checked' : ''}> Afficher les zones à 5, 10 et 15 min à pied</label>`;
+  $('#isoTog').onchange = e => { showIso = e.target.checked; store.set('cm:iso', showIso); drawIso(); };
+}
+
+/* ============================================================
+   Favoris, historique, notes de visite et photos
+   ============================================================ */
+const lib = $('#lib');
+let libTab = 'favs', libUrls = [];
+function openLib(open){
+  lib.hidden = !open;
+  if (open) { $('#chat').hidden = true; $('#fab').hidden = false; renderLib(); }
+}
+$('#libBtn').addEventListener('click', () => openLib(true));
+$('#libClose').addEventListener('click', () => openLib(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lib.hidden) openLib(false); });
+$('#libTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) { libTab = b.dataset.tab; renderLib(); } });
+const scoreBadge = s => `<span class="sb">${s == null ? '–' : s}</span>`;
+async function renderLib(){
+  libUrls.forEach(URL.revokeObjectURL); libUrls = [];
+  $('#libTabs').querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === libTab)));
+  const list = (await DB.all(libTab === 'favs' ? 'favs' : 'history')).sort((a, b) => b.ts - a.ts);
+  const body = $('#libBody');
+  if (!list.length) {
+    body.innerHTML = `<p class="hint" style="padding:8px 2px">${libTab === 'favs' ? 'Aucun favori pour l\'instant. Analysez une adresse puis touchez « Enregistrer ».' : 'Les adresses que vous analysez apparaîtront ici, même hors connexion.'}</p>`;
+    return;
+  }
+  body.innerHTML = list.map(x => `<button type="button" class="li" data-open="${esc(x.id)}">${scoreBadge(x.score)}<span><b>${esc(x.label || 'Adresse sans nom')}</b><small>${fmtDate(x.ts)}${x.note ? ' · note' : ''}${x.photos ? ` · ${x.photos} photo${x.photos > 1 ? 's' : ''}` : ''}</small></span></button>`).join('');
+}
+$('#libBody').addEventListener('click', async e => {
+  const b = e.target.closest('[data-open]'); if (!b) return;
+  if (libTab === 'favs') return showFav(b.dataset.open);
+  const h = await DB.get('history', b.dataset.open); if (!h) return;
+  openLib(false); goTo(h);
+});
+function goTo(x){
+  S.r = x.r || S.r; if (x.active) S.active = new Set(x.active);
+  q.value = x.label || ''; setCenter(x.c, x.label || null);
+}
+function snapHtml(x){
+  const cats = (x.cats || []).map(c => { const d = CAT[c.id]; return d ? `<li style="--c:${d.color}"><i></i><div><b>${esc(d.name)}</b> : ${c.n ? `${c.n} · 🚶 ${c.band ? '≤ ' + c.band : walkMin(c.d)} min` : 'aucun'}</div></li>` : ''; }).join('');
+  const f = x.fiche || {};
+  const risks = (f.risks || []).filter(r => r.level > 0).map(r => `${esc(r.name)} (${LVL[r.level].toLowerCase()})`).join(', ');
+  const price = f.price && (f.price.appart || f.price.maison) ? [f.price.appart ? 'appart. ' + fmtEur(f.price.appart) + '/m²' : '', f.price.maison ? 'maison ' + fmtEur(f.price.maison) + '/m²' : ''].filter(Boolean).join(' · ') : '';
+  const trips = (x.trips || []).map(t => `<li><b>${esc(t.name)}</b> : ${MODES.map(m => t.t && t.t[m.id] != null ? m.name.toLowerCase() + ' ' + fmtMin(t.t[m.id]) : '').filter(Boolean).join(', ')}</li>`).join('');
+  const tc = f.freq ? `${freqLevel(f.freq.perHour)} : ${f.freq.routes.slice(0, 4).map(r => `${FREQ_MODES[r.mode].toLowerCase()} ${esc(r.name)} ${every(r)}`).join(', ')}` : '';
+  return `<div class="bilan"><div class="hd"><strong>${x.score ?? '–'}</strong><span>/100 · rayon ${fmtDist(x.r || 800)}${x.q15 ? ` · Score 15 min ${x.q15.ok}/${x.q15.total}` : ''}</span></div>
+    ${trips ? `<p style="margin:8px 0 0"><b>Trajets</b></p><ul class="tl">${trips}</ul>` : ''}
+    ${risks ? `<p style="margin:8px 0 0"><b>Risques</b> : ${risks}</p>` : ''}${price ? `<p style="margin:4px 0 0"><b>Prix médian</b> : ${price}</p>` : ''}${tc ? `<p style="margin:4px 0 0"><b>Transports</b> : ${tc}</p>` : ''}
+    <ul>${cats}</ul></div>`;
+}
+async function showFav(id){
+  const x = await DB.get('favs', id); if (!x) return renderLib();
+  libUrls.forEach(URL.revokeObjectURL); libUrls = [];
+  const photos = (await DB.all('photos')).filter(p => p.favId === id).sort((a, b) => a.ts - b.ts);
+  const imgs = photos.map(p => { const u = URL.createObjectURL(p.blob); libUrls.push(u); return `<figure><img src="${u}" alt="Photo de visite"><button type="button" class="x" data-del-photo="${p.id}" aria-label="Supprimer la photo">×</button></figure>`; }).join('');
+  $('#libBody').innerHTML = `<button type="button" class="back" id="favBack">← Mes favoris</button>
+    <h3 class="fh">${esc(x.label)}</h3><p class="hint" style="margin:0">Enregistré le ${fmtDate(x.ts)}</p>
+    ${snapHtml(x)}
+    <label class="lbl" for="favNote">Notes de visite</label>
+    <textarea id="favNote" rows="4" placeholder="Luminosité, bruit, état de l'immeuble, voisinage…">${esc(x.note || '')}</textarea>
+    <div class="lbl">Photos</div>
+    <div class="photos">${imgs}<label class="addph"><input type="file" id="favPhoto" accept="image/*" capture="environment" multiple hidden><span>+ Photo</span></label></div>
+    <div class="actions"><button type="button" class="btn dark" id="favGo">Voir sur la carte</button><button type="button" class="btn" id="favDel">Supprimer</button></div>`;
+  let nt;
+  $('#favNote').oninput = e => { clearTimeout(nt); nt = setTimeout(async () => { x.note = e.target.value.slice(0, 4000); await DB.put('favs', x); }, 500); };
+  $('#favBack').onclick = () => { libTab = 'favs'; renderLib(); };
+  $('#favGo').onclick = () => { openLib(false); goTo(x); };
+  $('#favDel').onclick = async () => {
+    if ($('#favDel').dataset.confirm !== '1') { $('#favDel').dataset.confirm = '1'; $('#favDel').textContent = 'Confirmer la suppression'; return; }
+    for (const p of photos) await DB.del('photos', p.id);
+    await DB.del('favs', id); renderLib(); updateFavBtn(); toast('Favori supprimé.');
+  };
+  $('#favPhoto').onchange = async e => {
+    const files = [...e.target.files].slice(0, 10);
+    for (const f of files) await DB.put('photos', { id: 'ph' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), favId: id, blob: await shrink(f), ts: Date.now() });
+    x.photos = (x.photos || 0) + files.length; await DB.put('favs', x); showFav(id);
+  };
+  $('#libBody').querySelectorAll('[data-del-photo]').forEach(b => b.onclick = async () => {
+    await DB.del('photos', b.dataset.delPhoto); x.photos = Math.max(0, (x.photos || 1) - 1); await DB.put('favs', x); showFav(id);
+  });
+}
+async function shrink(file, max = 1600){
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height)), cv = document.createElement('canvas');
+    cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+    return await new Promise(r => cv.toBlob(b => r(b || file), 'image/jpeg', 0.82));
+  } catch { return file; }
+}
+async function findFav(){ if (!S.center) return null; const k = placeKey(S.center); return (await DB.all('favs')).find(f => f.key === k) || null; }
+async function updateFavBtn(){
+  const f = await findFav();
+  $('#favBtn').innerHTML = f ? '★ Enregistré' : '☆ Enregistrer';
+  $('#favBtn').setAttribute('aria-pressed', String(!!f));
+}
+$('#favBtn').addEventListener('click', async () => {
+  if (!S.center) return;
+  const f = await findFav();
+  if (f) { libTab = 'favs'; openLib(true); return showFav(f.id); }
+  const snap = snapshot();
+  try {
+    await DB.put('favs', { id: 'f' + Date.now().toString(36), ...snap, note: '', photos: 0 });
+    toast('Adresse ajoutée à vos favoris. Ajoutez une note ou des photos de visite.'); updateFavBtn();
+  } catch { toast('Impossible d\'enregistrer sur cet appareil (navigation privée ?).'); }
+});
+
+/* ============================================================
+   Bilan partageable : PNG et PDF
+   ============================================================ */
+function wrapText(ctx, text, maxW){
+  const words = String(text).split(/\s+/), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur); return lines;
+}
+async function drawBilan(){
+  try { await document.fonts.ready; } catch {}
+  const W = 1080, H = 1500, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d'), F = (w, s) => `${w} ${s}px Overpass, "Segoe UI", Roboto, sans-serif`;
+  const snap = snapshot();
+  x.fillStyle = '#fffaf0'; x.fillRect(0, 0, W, H);
+  const g = x.createLinearGradient(0, 0, W, 320); g.addColorStop(0, '#00b8d4'); g.addColorStop(.55, '#ff7a1a'); g.addColorStop(1, '#ff2d7a');
+  x.fillStyle = g; x.fillRect(0, 0, W, 330);
+  x.fillStyle = '#fff'; x.font = F(800, 64); x.fillText('CheckMap', 64, 110);
+  x.font = F(600, 30); x.globalAlpha = .9; x.fillText('Bilan de quartier · ' + fmtDate(Date.now()), 64, 158); x.globalAlpha = 1;
+  x.font = F(800, 40); wrapText(x, snap.label || 'Adresse analysée', W - 128).slice(0, 2).forEach((l, i) => x.fillText(l, 64, 232 + i * 50));
+  // anneau du score
+  const cx = 190, cy = 500, R = 120;
+  x.lineWidth = 26; x.strokeStyle = '#f0dfc4'; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.stroke();
+  const rg = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, '#ff7a1a'); rg.addColorStop(1, '#ff2d7a');
+  x.strokeStyle = rg; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (snap.score || 0) / 100); x.stroke();
+  x.fillStyle = '#12263a'; x.textAlign = 'center'; x.font = F(800, 92); x.fillText(snap.score ?? '–', cx, cy + 22); x.font = F(600, 28); x.fillStyle = '#5d6b78'; x.fillText('/100', cx, cy + 64); x.textAlign = 'left';
+  const [lab] = S.failed ? ['Données indisponibles'] : scoreLabel(snap.score);
+  x.fillStyle = '#12263a'; x.font = F(800, 46); x.fillText(lab, 360, 470);
+  x.font = F(400, 30); x.fillStyle = '#5d6b78';
+  x.fillText(`Rayon ${fmtDist(snap.r)} · ≈ ${walkMin(snap.r)} min à pied`, 360, 520);
+  if (snap.q15) { x.fillStyle = '#0077b6'; x.font = F(700, 30); x.fillText(`Score 15 minutes : ${snap.q15.ok}/${snap.q15.total} besoins`, 360, 566); }
+  // catégories
+  let y = 690; x.fillStyle = '#12263a'; x.font = F(800, 34); x.fillText('À proximité', 64, y); y += 24;
+  snap.cats.slice(0, 15).forEach((c, i) => {
+    const d = CAT[c.id], col = i % 2, row = Math.floor(i / 2), px = 64 + col * 490, py = y + 30 + row * 64;
+    x.fillStyle = d.color; x.beginPath(); x.roundRect ? x.roundRect(px, py, 22, 22, 5) : x.rect(px, py, 22, 22); x.fill();
+    x.fillStyle = '#12263a'; x.font = F(700, 27); x.fillText(d.name.length > 26 ? d.name.slice(0, 25) + '…' : d.name, px + 36, py + 19);
+    x.fillStyle = '#5d6b78'; x.font = F(400, 24);
+    x.fillText(c.n ? `${c.n} lieu${c.n > 1 ? 'x' : ''} · ${c.band ? '≤ ' + c.band : walkMin(c.d)} min à pied` : 'aucun dans le rayon', px + 36, py + 50);
+  });
+  y += 30 + Math.ceil(Math.min(15, snap.cats.length) / 2) * 64 + 40;
+  const block = (title, lines) => {
+    if (!lines.length || y > H - 160) return;
+    x.fillStyle = '#12263a'; x.font = F(800, 34); x.fillText(title, 64, y); y += 46;
+    x.font = F(400, 27); x.fillStyle = '#33424f';
+    for (const l of lines) { for (const w of wrapText(x, l, W - 128)) { if (y > H - 110) return; x.fillText(w, 64, y); y += 38; } }
+    y += 22;
+  };
+  block('Mes trajets', snap.trips.map(t => `${t.name} : ${MODES.map(m => t.t && t.t[m.id] != null ? m.name.toLowerCase() + ' ' + fmtMin(t.t[m.id]) : '').filter(Boolean).join(' · ')}`));
+  const f = snap.fiche || {};
+  const rk = (f.risks || []).filter(r => r.level > 0).slice(0, 5).map(r => `${r.name} : ${LVL[r.level].toLowerCase()}`);
+  const pr = f.price && (f.price.appart || f.price.maison) ? [`Prix médian : ${[f.price.appart ? 'appartements ' + fmtEur(f.price.appart) + '/m²' : '', f.price.maison ? 'maisons ' + fmtEur(f.price.maison) + '/m²' : ''].filter(Boolean).join(', ')}`] : [];
+  const ln = f.freq ? [`Transports : ${freqLevel(f.freq.perHour).toLowerCase()}`, ...f.freq.routes.slice(0, 5).map(r => `${FREQ_MODES[r.mode]} ${r.name} : ${every(r)}`)]
+    : (f.lines || []).map(l => `${l.mode} : ${l.mode === 'Bus' && l.refs.length > 8 ? l.refs.length + ' lignes' : l.refs.join(', ')}`);
+  block('Risques, prix et transports', [...rk, ...pr, ...ln]);
+  x.fillStyle = '#f0dfc4'; x.fillRect(0, H - 80, W, 80);
+  x.fillStyle = '#5d6b78'; x.font = F(400, 22);
+  x.fillText(`Données : © OpenStreetMap (ODbL), Géorisques, DVF (Cerema)${f.freq ? ', transport.data.gouv.fr' : ''}. Temps de trajet estimés.`, 64, H - 32);
+  return new Promise(r => cv.toBlob(r, 'image/png'));
+}
+let bilanBlob = null, pdfLib = null;
+const fileName = ext => 'checkmap-' + (S.label || 'bilan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40).replace(/-$/, '') + '.' + ext;
+async function shareFile(blob, name, title){
+  const share = nativePlugin('Share'), fs = nativePlugin('Filesystem');
+  if (share && fs) {
+    try {
+      const { uri } = await fs.writeFile({ path: name, data: await blobToBase64(blob), directory: 'CACHE' });
+      await share.share({ title, files: [uri] });
+    } catch (e) { if (!/cancel/i.test(e && e.message)) toast('Partage impossible pour le moment.'); }
+    return;
+  }
+  const file = new File([blob], name, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title, text: title }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+  toast('Fichier enregistré dans vos téléchargements.');
+}
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+$('#bilanBtn').addEventListener('click', async () => {
+  if (!S.center) return;
+  const dlg = $('#bilanDlg'); dlg.hidden = false;
+  $('#bilanPrev').innerHTML = '<p class="hint"><span class="spin sm"></span> Préparation du bilan…</p>';
+  bilanBlob = await drawBilan();
+  const u = URL.createObjectURL(bilanBlob);
+  $('#bilanPrev').innerHTML = `<img src="${u}" alt="Aperçu du bilan">`;
+  $('#bilanShare').textContent = NATIVE || navigator.canShare && navigator.canShare({ files: [new File([bilanBlob], 'a.png', { type: 'image/png' })] }) ? 'Partager l\'image' : 'Enregistrer l\'image';
+});
+$('#bilanClose').addEventListener('click', () => { $('#bilanDlg').hidden = true; });
+$('#bilanDlg').addEventListener('click', e => { if (e.target.id === 'bilanDlg') $('#bilanDlg').hidden = true; });
+$('#bilanShare').addEventListener('click', () => { if (bilanBlob) shareFile(bilanBlob, fileName('png'), 'Bilan CheckMap : ' + S.label); });
+$('#bilanPdf').addEventListener('click', async () => {
+  if (!bilanBlob) return;
+  const b = $('#bilanPdf'); b.disabled = true; b.textContent = 'Création du PDF…';
+  try {
+    if (!pdfLib) { await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'); pdfLib = window.jspdf; }
+    const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(bilanBlob); });
+    const doc = new pdfLib.jsPDF({ unit: 'pt', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight(), w = pw - 60, h = w * 1500 / 1080;
+    doc.addImage(url, 'PNG', 30, Math.max(20, (ph - h) / 2), w, Math.min(h, ph - 40));
+    doc.setProperties({ title: 'Bilan CheckMap : ' + S.label });
+    await shareFile(doc.output('blob'), fileName('pdf'), 'Bilan CheckMap : ' + S.label);
+  } catch { toast('Création du PDF impossible (connexion nécessaire la première fois).'); }
+  b.disabled = false; b.textContent = 'PDF';
+});
+
+/* Raccordement au cycle d'analyse */
+function onCenterChange(){ updateFavBtn(); computeTrips(); loadFiche(); loadIso(); }
+drawMyPlaces(); renderTrips();
+
+/* ============================================================
+   Démarrage
+   ============================================================ */
+renderRadii(); renderPacks();
+if (fromHash.c) { q.value = fromHash.label; setCenter(fromHash.c, fromHash.label || null); }
+else if (prefs && Array.isArray(prefs.c)) setCenter(prefs.c, prefs.label || null);
+else {
+  setCenter([48.86745, 2.36362], 'Place de la République, 75011 Paris');
+  setTimeout(() => toast('Recherchez votre adresse ou utilisez la géolocalisation.'), 1200);
+}
+addEventListener('hashchange', () => {
+  const h = readHash();
+  if (h.c && S.center && dist(h.c, S.center) > 5) { if (h.r) S.r = h.r; if (h.cats) S.active = new Set(h.cats); setCenter(h.c, h.label || null); }
+});
+
+// Raccourcis Siri : « analyse ce quartier », « analyse une adresse »
+async function nativeAction(){
+  const p = nativePlugin('MonQuartier'); if (!p) return;
+  let a; try { a = await p.actionEnAttente(); } catch { return; }
+  if (a && a.type === 'position') locate();
+  else if (a && a.type === 'adresse' && a.q) { q.value = a.q; $('#searchForm').requestSubmit(); }
+}
+if (nativePlugin('MonQuartier')) {
+  nativePlugin('MonQuartier').addListener('action', nativeAction);
+  nativeAction(); setTimeout(nativeAction, 1500);
+}
+if ('serviceWorker' in navigator && servedOverHttp) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+}
+</script>
+</body>
+</html>
