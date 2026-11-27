@@ -32,7 +32,7 @@ for (const [nom, url] of [
 const RECHERCHES = ['15 rue nationale lille', 'montmartre', 'gare de lyon', 'place bellecour', 'tour eiffel', 'hopital rennes', 'hopital ren',
   '5 avenue anatole france', 'fort-de-france', 'mairie de bordeaux', 'rue de la gare', 'bastille', 'lyon', 'marseille vieux port', 'chu rennes', 'aeroport nice'];
 rapport.brut = {};
-for (const q of RECHERCHES) {
+if (process.env.AFFICHER_BRUT) for (const q of RECHERCHES) {
   const url = `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q)}&limit=10&index=address,poi&autocomplete=1`;
   try {
     rapport.brut[q] = { sans: await (await fetch(url)).json(), avec: await (await fetch(url + '&lat=48.86745&lon=2.36362')).json() };
@@ -164,8 +164,25 @@ for (const a of ADRESSES) {
   await ctx.close();
 }
 
+// Contrôles : le parcours échoue si l'un d'eux ne passe pas
+const problemes = [];
+for (const s of rapport.scenarios) {
+  for (const e of s.erreurs) if (e.startsWith('js ')) problemes.push(`${s.nom} : erreur JavaScript ${e.slice(3, 160)}`);
+  if ('score' in s) {
+    if (!/\d/.test(s.score || '')) problemes.push(`${s.nom} : pas de score (${s.erreur || 'sans message'})`);
+    if (!s.adresse || /^-?\d+\.\d+, -?\d+\.\d+$/.test(s.adresse)) problemes.push(`${s.nom} : adresse du point introuvable`);
+    if (!s.carteGL) problemes.push(`${s.nom} : fond Lagon non affiché`);
+    if (!s.zonesMarche) problemes.push(`${s.nom} : zones de marche absentes`);
+  }
+  if (s.fonds) for (const f of s.fonds) if (!f.actif) problemes.push(`fond « ${f.nom} » remplacé par un autre (ne répond pas)`);
+  if (s.suggestions) for (const [q, l] of Object.entries(s.suggestions)) if (!l.length || /indisponibles|Aucune suggestion/.test(l[0])) problemes.push(`recherche « ${q} » : ${l[0] || 'rien'}`);
+  if (s.nom === 'bilan' && !s.pdf) problemes.push('bilan : PDF non créé');
+}
+rapport.problemes = problemes;
+if (problemes.length) process.exitCode = 1;
 rapport.fin = new Date().toISOString();
 fs.writeFileSync(`${SORTIE}/rapport.json`, JSON.stringify(rapport, null, 2));
 await browser.close();
 console.log(JSON.stringify(rapport, null, 2));
+console.log(problemes.length ? `PROBLÈMES (${problemes.length}) :\n- ${problemes.join('\n- ')}` : 'Tout est bon.');
 if (process.env.AFFICHER_CAPTURES) for (const f of captures) console.log(`CAPTURE ${f.split('/').pop()} ${fs.readFileSync(f).toString('base64')}`);

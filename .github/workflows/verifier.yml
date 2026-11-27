@@ -1,17 +1,23 @@
-# Vérifie l'appli dans un vrai navigateur avec les services en ligne, avant de la publier.
-# Captures et rapport dans l'onglet Actions > Vérifier CheckMap > artefact « verification ».
+# Vérifie CheckMap dans un vrai navigateur, avec les services en ligne (cartes, adresses, itinéraires, lieux).
+# - Après chaque publication : contrôle du site en ligne.
+# - À la demande (Actions > Vérifier CheckMap > Run workflow) : sur une branche, contrôle de la copie du dépôt avant publication.
+# Rapport et captures : journal de l'étape « Parcours » et artefact « verification ».
 name: Vérifier CheckMap
 
 on:
+  workflow_run:
+    workflows: ['Publier CheckMap']
+    types: [completed]
+  workflow_dispatch:
   push:
     branches: [services-ouverts]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   verifier:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -24,10 +30,13 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.48.2
           npx playwright install --with-deps chromium
       - name: Parcours avec les vrais services
+        env:
+          # Après une publication : le site en ligne ; sinon : la copie du dépôt servie ici
+          SITE: ${{ github.event_name == 'workflow_run' && 'https://donposei81-coder.github.io/checkmap/' || 'http://127.0.0.1:8080/' }}
         run: |
           python3 -m http.server 8080 --bind 127.0.0.1 > /dev/null 2>&1 &
           sleep 1
-          AFFICHER_CAPTURES=1 AFFICHER_BRUT=1 node outils/verification/verifier.mjs
+          AFFICHER_CAPTURES=1 node outils/verification/verifier.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
