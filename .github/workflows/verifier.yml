@@ -1,0 +1,36 @@
+# Vérifie l'appli dans un vrai navigateur avec les services en ligne, avant de la publier.
+# Captures et rapport dans l'onglet Actions > Vérifier CheckMap > artefact « verification ».
+name: Vérifier CheckMap
+
+on:
+  push:
+    branches: [services-ouverts]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Navigateur
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Parcours avec les vrais services
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 > /dev/null 2>&1 &
+          sleep 1
+          node outils/verification/verifier.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification
+          path: verification
+          retention-days: 7
