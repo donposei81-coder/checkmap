@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // API : toujours le réseau
-  if (/overpass|photon\.komoot|nominatim|georisques|cerema|routing\.openstreetmap|valhalla|api\.gouv/.test(url.host) || url.pathname.includes('/freq/')) return;
+  if (/overpass|photon\.komoot|nominatim|georisques|cerema|routing\.openstreetmap|valhalla|api\.gouv/.test(url.host) || /\/(freq|lieux)\//.test(url.pathname)) return;
   // Tuiles, polices et style de carte : cache d'abord, mise à jour en arrière-plan
   if (/tile\.openstreetmap\.(org|fr)|arcgisonline\.com|tiles\.openfreemap\.org/.test(url.host)) {
     e.respondWith(caches.open(TILES).then(async c => {

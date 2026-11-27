@@ -417,7 +417,7 @@ body.lagon .leaflet-bar a,body.lagon .leaflet-control-layers{border-color:#dbe3e
       <button class="btn" id="shareBtn" type="button">Partager le lien</button>
       <button class="btn" id="pinBtn" type="button">Comparer…</button>
     </div>
-    <p class="credits">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL), via Overpass API. Géocodage Photon et Nominatim. Distances à vol d'oiseau, temps de marche estimés avec 30 % de détour.</p>
+    <p class="credits">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a> (ODbL), extraits Geofabrik mis à jour chaque semaine et API Overpass. Géocodage Photon et Nominatim. Distances à vol d'oiseau, temps de marche estimés avec 30 % de détour.</p>
   </div>
 </aside>
 
@@ -463,6 +463,8 @@ const DETOUR = 1.3;              // les rues ne sont pas en ligne droite
 const RADII = [500, 800, 1000, 1500];
 // Adresse des fichiers de fréquence (outils/frequences). Vide : dossier freq/ à côté de l'appli s'il existe.
 const FREQ_URL = '';
+// Adresse des lieux pré-calculés (outils/lieux). Vide : dossier lieux/ à côté de l'appli s'il existe.
+const LIEUX_URL = '';
 // Adresse publique de la version web : liens partagés depuis l'appli iPhone ou un fichier local, fréquences des transports.
 const SITE_URL = 'https://donposei81-coder.github.io/checkmap/';
 const MIN_FETCH = 1000, MARGIN = 250, MAX_R = 2500;
@@ -884,10 +886,53 @@ function cachePut(c, R, places){
   while (!store.set(CACHE_V + ':d:' + e.k, places) && idx.length > 1) store.del(CACHE_V + ':d:' + idx.pop().k);
   store.set(CACHE_V + ':idx', idx);
 }
+// Fichiers statiques publiés avec l'appli (lieux/, freq/) : adresse du dossier, ou null s'il n'existe pas.
+const dataBases = {};
+function dataBase(dir, override){
+  if (!dataBases[dir]) {
+    const site = servedOverHttp && !NATIVE ? location.href : SITE_URL && (/\.html?$/.test(SITE_URL) ? SITE_URL : SITE_URL.replace(/\/?$/, '/'));
+    const url = (override || (site ? new URL(dir + '/', site).href : '')).replace(/\/?$/, '');
+    // 404 : pas de dossier ici (on ne redemande pas) ; erreur réseau : nouvel essai plus tard
+    dataBases[dir] = !url ? Promise.resolve(null) : fetchJSON(url + '/index.json', {}, 8000).then(() => url, e => { if (!e.status) delete dataBases[dir]; return null; });
+  }
+  return dataBases[dir];
+}
+// Lieux pré-calculés chaque semaine (outils/lieux) : tuiles de 0,05°, découpées en 0,01° dans les centres-villes.
+const LT = 0.05, LS = 0.01, lieuxTiles = new Map();
+function lieuxFile(base, path){
+  if (!lieuxTiles.has(path)) {
+    const p = fetchText(`${base}/${path}.tsv`, {}, 12000).then(t => t.startsWith('decoupe') ? 'decoupe' : csvPlaces(t), e => { if (e.status === 404) return []; throw e; });
+    lieuxTiles.set(path, p);
+    p.catch(() => lieuxTiles.delete(path));
+    if (lieuxTiles.size > 80) lieuxTiles.delete(lieuxTiles.keys().next().value);
+  }
+  return lieuxTiles.get(path);
+}
+async function placesFromTiles(c, R){
+  const base = await dataBase('lieux', LIEUX_URL); if (!base) return null;
+  const dLat = R / 111320, dLon = R / (111320 * Math.cos(c[0] * Math.PI / 180));
+  const s = c[0] - dLat, n = c[0] + dLat, w = c[1] - dLon, e = c[1] + dLon, jobs = [];
+  for (let y = Math.floor(s / LT); y <= Math.floor(n / LT); y++) for (let x = Math.floor(w / LT); x <= Math.floor(e / LT); x++) {
+    jobs.push(lieuxFile(base, `t/${y}_${x}`).then(rows => {
+      if (rows !== 'decoupe') return rows;
+      const sub = [];
+      for (let Y = Math.floor(Math.max(s, y * LT) / LS); Y <= Math.floor(Math.min(n, (y + 1) * LT) / LS); Y++)
+        for (let X = Math.floor(Math.max(w, x * LT) / LS); X <= Math.floor(Math.min(e, (x + 1) * LT) / LS); X++)
+          sub.push(lieuxFile(base, `s/${Y}_${X}`).then(r => r.filter(p => Math.floor(p.lat / LT) === y && Math.floor(p.lon / LT) === x)));
+      return Promise.all(sub).then(a => a.flat());
+    }));
+  }
+  const els = (await Promise.all(jobs)).flat().filter(p => p.lat != null && dist(c, [p.lat, p.lon]) <= R);
+  return parseElements(els);
+}
 async function getPlaces(c, r, onSlow){
   const hit = cacheFind(c, r, false);
   if (hit) return { places: hit.places, cached: true };
   const R = Math.max(r, MIN_FETCH) + MARGIN;
+  // D'abord les lieux pré-calculés (rapides, sans limite de requêtes) ; Overpass en secours ou si la zone est vide
+  let tiles = null;
+  try { tiles = await placesFromTiles(c, R); } catch {}
+  if (tiles && tiles.length) { cachePut(c, R, tiles); return { places: tiles, cached: false }; }
   try {
     const places = parseElements(await overpass(buildQuery(c, R), csvPlaces, onSlow));
     cachePut(c, R, places);
@@ -895,6 +940,7 @@ async function getPlaces(c, r, onSlow){
   } catch (e) {
     const stale = cacheFind(c, r, true);
     if (stale) return { places: stale.places, cached: true, stale: true };
+    if (tiles) return { places: tiles, cached: false };
     throw e;
   }
 }
@@ -1830,16 +1876,7 @@ async function loadLines(c){
 const FREQ_MODES = { 1: 'Métro', 2: 'Train', 0: 'Tram', 3: 'Bus', 4: 'Bateau', 6: 'Câble' };
 const FREQ_ORDER = [1, 2, 0, 3, 4, 6];
 const freqTiles = new Map();
-let freqBaseP = null;
-function freqBase(){
-  if (!freqBaseP) {
-    const site = servedOverHttp && !NATIVE ? location.href : SITE_URL && (/\.html?$/.test(SITE_URL) ? SITE_URL : SITE_URL.replace(/\/?$/, '/'));
-    const url = (FREQ_URL || (site ? new URL('freq/', site).href : '')).replace(/\/?$/, '');
-    // 404 : pas de fichiers de fréquence ici (on ne redemande pas) ; erreur réseau : nouvel essai plus tard
-    freqBaseP = !url ? Promise.resolve(null) : fetchJSON(url + '/index.json', {}, 8000).then(() => url, e => { if (!e.status) freqBaseP = null; return null; });
-  }
-  return freqBaseP;
-}
+const freqBase = () => dataBase('freq', FREQ_URL);
 function freqTile(base, key){
   if (!freqTiles.has(key)) {
     const p = fetchJSON(`${base}/t/${key}.json`, {}, 12000).then(j => j.s || [], e => { if (e.status === 404) return []; throw e; });

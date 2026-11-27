@@ -7,8 +7,9 @@ En ligne : https://donposei81-coder.github.io/checkmap/
 ## Fichiers
 - `index.html` : toute l'application (HTML, CSS, JavaScript).
 - `manifest.webmanifest`, `sw.js`, `icon.svg`, `icon-192.png`, `icon-512.png` : installation en PWA et mode hors ligne (seulement quand le site est servi en http/https).
+- `outils/lieux/` : lieux du quotidien de toute la France, extraits d'OpenStreetMap chaque semaine en tuiles statiques.
 - `outils/frequences/` : calcul de la fréquence des lignes de transport (horaires GTFS).
-- `.github/workflows/publier.yml` : publication sur GitHub Pages à chaque modification de l'appli, et nouveau calcul des fréquences chaque lundi.
+- `.github/workflows/publier.yml` : publication sur GitHub Pages à chaque modification de l'appli, et nouveau calcul des lieux et des fréquences chaque lundi.
 - `app-mobile/` : appli iPhone (Capacitor), widget « Mon quartier » et raccourcis Siri.
 
 ## Tester
@@ -32,13 +33,13 @@ En ligne : https://donposei81-coder.github.io/checkmap/
 - Plans classiques : OpenStreetMap (uniquement en http/https, car les serveurs OSM refusent les pages ouvertes en fichier local), Esri, OSM France, Humanitaire.
 
 ## Services utilisés (gratuits, sans clé)
-- Lieux : API Overpass, 5 serveurs (OpenStreetMap France en premier). Une seule requête par zone, au format CSV (huit fois plus léger que le JSON), puis filtrage dans l'appli ; si un serveur tarde plus de 6 s, le suivant est interrogé en parallèle, et au bout de 50 s l'appli affiche un message avec un bouton « Réessayer ». Résultats gardés 24 h.
+- Lieux : tuiles pré-calculées chaque semaine depuis les extraits OpenStreetMap de Geofabrik (`outils/lieux`), publiées avec l'appli : réponse en une ou deux secondes, sans dépendre d'un serveur public. En secours (tuiles absentes ou zone vide) : API Overpass, 5 serveurs (OpenStreetMap France en premier). Une seule requête par zone, au format CSV (huit fois plus léger que le JSON), puis filtrage dans l'appli ; si un serveur tarde plus de 6 s, le suivant est interrogé en parallèle, et au bout de 50 s l'appli affiche un message avec un bouton « Réessayer ». Résultats gardés 24 h.
 - Adresses : Photon (autocomplétion), Nominatim en secours.
 - Temps de trajet : OSRM (serveurs FOSSGIS). Zones de marche : Valhalla (FOSSGIS).
 - Fréquence des transports : horaires GTFS de transport.data.gouv.fr, pré-calculés en fichiers statiques (`outils/frequences`).
 - Risques : API Géorisques. Prix : DVF via l'API du Cerema (URL de préproduction `apidf-preprod.cerema.fr`, à surveiller ; DVF ne couvre pas l'Alsace, la Moselle et Mayotte).
 - Fonds de carte : OpenFreeMap (usage commercial autorisé, sans clé), Esri, OpenStreetMap. Les mentions © restent affichées en bas de la carte.
-- Pour un usage public à fort trafic, prévoir des serveurs Overpass / Photon / OSRM dédiés ou un fournisseur payant : les serveurs publics limitent le nombre de requêtes.
+- Pour un usage public à fort trafic, prévoir des serveurs Photon / OSRM dédiés ou un fournisseur payant : les serveurs publics limitent le nombre de requêtes.
 
 ## Score sur 100
 Chaque catégorie cochée a un poids (ex. transports 3, supermarchés 3, pharmacies 2,5, toilettes 0,5), une distance idéale et un nombre de lieux visé.
