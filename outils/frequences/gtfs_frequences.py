@@ -201,13 +201,16 @@ def process(path, forced_day=None):
         raw[col(idx, r, 'stop_id')] = (col(idx, r, 'parent_station'), lat, lon, col(idx, r, 'stop_name')[:40])
     station = {sid: (p if p in raw else sid) for sid, (p, *_rest) in raw.items()}
 
-    agg = {}  # (station, route, sens) -> [total, pointe, journée, premier, dernier]
+    # (station, route, sens) -> [total, pointe, journée, premier, dernier, avant 3 h, premier après 3 h, dernier en comptant 0-3 h comme fin de soirée]
+    # Certains réseaux notent « 00:09 » au lieu de « 24:09 » pour les passages après minuit : sans correction,
+    # une ligne de jour afficherait « premier départ 0h09 ».
+    agg = {}
 
     def add(st, rid, d, t):
         k = (st, rid, d)
         v = agg.get(k)
         if v is None:
-            v = agg[k] = [0, 0, 0, 10 ** 6, -1]
+            v = agg[k] = [0, 0, 0, 10 ** 6, -1, 0, 10 ** 6, -1]
         v[0] += 1
         if PEAK[0] <= t < PEAK[1]:
             v[1] += 1
@@ -217,6 +220,13 @@ def process(path, forced_day=None):
             v[3] = t
         if t > v[4]:
             v[4] = t
+        if t < 180:
+            v[5] += 1
+            t += 1440
+        elif t < v[6]:
+            v[6] = t
+        if t > v[7]:
+            v[7] = t
 
     pattern = {}  # trajets à fréquence : (arrêt, décalage depuis le premier départ)
     idx, rows = feed.rows('stop_times.txt')
@@ -261,6 +271,13 @@ def process(path, forced_day=None):
         else:
             cur[0], cur[1], cur[2] = max(cur[0], v[0]), max(cur[1], v[1]), max(cur[2], v[2])
             cur[3], cur[4] = min(cur[3], v[3]), max(cur[4], v[4])
+            cur[5], cur[6], cur[7] = max(cur[5], v[5]), min(cur[6], v[6]), max(cur[7], v[7])
+    def first_last(v):
+        # Ligne de jour avec quelques passages notés entre 0 h et 3 h : ce sont des fins de soirée
+        if v[6] < 10 ** 6 and v[5] < 0.25 * v[0]:
+            return v[6], v[7]
+        return v[3], v[4]
+
     stations = []
     for st, lines in out.items():
         if st not in raw:
@@ -268,7 +285,7 @@ def process(path, forced_day=None):
         _p, lat, lon, name = raw[st]
         if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
             continue
-        rl = [[routes[rid][0], routes[rid][1], routes[rid][2], v[0], v[1], v[2], v[3], v[4]] for rid, v in lines.items()]
+        rl = [[routes[rid][0], routes[rid][1], routes[rid][2], v[0], v[1], v[2], *first_last(v)] for rid, v in lines.items()]
         rl.sort(key=lambda x: (x[1], -x[4], -x[3]))
         stations.append([round(lat, 5), round(lon, 5), name, rl])
     return {'day': day.isoformat(), 'stations': stations, 'rows': n, 'trips': len(trips)}
