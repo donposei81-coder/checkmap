@@ -28,6 +28,18 @@ for (const [nom, url] of [
 ]) {
   try { rapport.exemples[nom] = JSON.stringify(await (await fetch(url)).json()).slice(0, 2500); } catch (e) { rapport.exemples[nom] = String(e); }
 }
+// Réponses brutes de la recherche (sans position et autour de République), pour régler l'ordre des suggestions hors ligne
+const RECHERCHES = ['15 rue nationale lille', 'montmartre', 'gare de lyon', 'place bellecour', 'tour eiffel', 'hopital rennes', 'hopital ren',
+  '5 avenue anatole france', 'fort-de-france', 'mairie de bordeaux', 'rue de la gare', 'bastille', 'lyon', 'marseille vieux port', 'chu rennes', 'aeroport nice'];
+rapport.brut = {};
+for (const q of RECHERCHES) {
+  const url = `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q)}&limit=10&index=address,poi&autocomplete=1`;
+  try {
+    rapport.brut[q] = { sans: await (await fetch(url)).json(), avec: await (await fetch(url + '&lat=48.86745&lon=2.36362')).json() };
+  } catch (e) { rapport.brut[q] = String(e); }
+}
+if (process.env.AFFICHER_BRUT) console.log('BRUT ' + JSON.stringify(rapport.brut));
+delete rapport.brut;
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 
 async function contexte(mobile){

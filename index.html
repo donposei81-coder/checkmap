@@ -1343,13 +1343,15 @@ async function geoSearch(text, limit, signal){
   if (!res.some(r => r.status === 'fulfilled')) throw res[0].reason;
   const items = res.flatMap(r => r.status === 'fulfilled' ? r.value.features || [] : [])
     .filter(f => f.geometry && f.geometry.coordinates).map(geoItem).filter(i => i.main);
-  // Ville écrite dans la recherche : ses résultats passent devant ; sinon, petit bonus aux résultats proches
-  const typed = new Set(words(text));
-  const named = i => { const w = words(i.city); return w.length > 0 && w.every(x => typed.has(x)); };
-  const anyNamed = items.some(named);
+  // Les résultats dont le nom, la ville ou le code postal contiennent tous les mots tapés passent devant
+  // (le dernier mot peut être incomplet), puis petit bonus aux résultats proches du point en cours
+  const typed = [...new Set(words(text))];
   for (const i of items) {
-    if (anyNamed) { if (named(i)) i.score += 0.2; }
-    else if (S.center) i.score += 0.12 * Math.exp(-kmBetween(S.center, i.c) / 40);
+    const have = [...new Set([...words(i.main), ...words(i.sub), ...words(i.city)])];
+    const hit = (w, k) => have.includes(w) || (k === typed.length - 1 && w.length > 1 && have.some(h => h.startsWith(w)));
+    const cov = typed.length ? typed.filter(hit).length / typed.length : 0;
+    i.score += cov === 1 ? 0.3 : 0.1 * cov;
+    if (S.center) i.score += 0.12 * cov * Math.exp(-kmBetween(S.center, i.c) / 40);
   }
   items.sort((x, y) => y.score - x.score);
   // Doublons : même nom à moins de 300 m (8 km pour une commune)
