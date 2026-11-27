@@ -320,7 +320,7 @@ body.sun .cl{background:#00a8c6;border-color:#fff;box-shadow:0 2px 8px rgba(0,90
 
 /* Thème Lagon (par défaut) */
 body.lagon{--panel:#f7f9fb;--land:#ffffff;--ink:#1b2a3a;--mute:#607184;--line:#dbe3ea;--soft:#edf2f6;--mag:#ff3d8b;--mag-ink:#e0266f;--brown:#ff7a59;--cyan:#12b3c4;color-scheme:light}
-body.lagon #map{background:#d4dce3}
+body.lagon #map{background:#f6f1e7}
 body.lagon #panel{border-color:#dbe3ea;box-shadow:0 14px 40px rgba(27,60,90,.18)}
 body.lagon .brand h1{background:linear-gradient(90deg,#ff3d8b,#12b3c4);-webkit-background-clip:text;background-clip:text;color:transparent}
 body.lagon .seg button[aria-pressed=true]{background:linear-gradient(135deg,#1fc9b5,#14afd0);border-color:#14afd0;color:#fff}
@@ -1075,11 +1075,13 @@ const tl = (url, opt) => L.tileLayer(url, { maxZoom: 19, ...opt });
 // Style vectoriel « Lagon » (tuiles OpenFreeMap, schéma OpenMapTiles)
 const LAGON_STYLE = (() => {
   const C = {
-    land: '#d4dce3', urban: '#cbd4dc', bShadow: '#a3b3c2', bTop: '#e4e9ee', bLine: '#b6c3ce',
-    water: '#14afd0', coast: '#86e1ee', river: '#2bb6d6', sand: '#e7c77f', grass: '#a9c8a1', wood: '#86ad80',
-    minor: '#f6f8fa', minorCase: '#bac6d1', major: '#ffffff', majorCase: '#a7b6c4', motor: '#efe5bf', motorCase: '#c8b884',
-    path: '#eef2f5', rail: '#b0bccb', label: '#4d5f70', place: '#2f4255'
+    land: '#f6f1e7', urban: '#f8eee4', bShadow: '#e2d3df', bLine: '#eddfe6',
+    water: '#12b6dc', coast: '#7eecf0', river: '#2cc6e4', sand: '#ffd98a', grass: '#b4e38a', wood: '#62bd6c',
+    minor: '#ffffff', minorCase: '#e2d5e4', major: '#fff1b8', majorCase: '#f2b84b', motor: '#ffb48f', motorCase: '#ee7d55',
+    path: '#f5a8c6', rail: '#9d86e8', label: '#5b4c7a', place: '#24305e'
   };
+  // Bâtiments pastel selon leur hauteur : pêche, rose, lavande, ciel
+  const bTop = ['interpolate', ['linear'], ['to-number', ['coalesce', ['get', 'render_height'], 8]], 0, '#fff3e4', 12, '#ffe9ef', 24, '#f0ebff', 45, '#e2f2ff'];
   const z = (a, b, c, d) => ['interpolate', ['exponential', 1.5], ['zoom'], a, b, c, d];
   const cls = (...v) => ['match', ['get', 'class'], v, true, false];
   const src = { source: 'omt' };
@@ -1091,17 +1093,19 @@ const LAGON_STYLE = (() => {
     sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': C.land } },
-      { id: 'urban', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('residential', 'commercial', 'industrial', 'retail', 'neighbourhood', 'suburb', 'quarter'), paint: { 'fill-color': C.urban } },
+      { id: 'urban', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('residential', 'commercial', 'industrial', 'retail', 'neighbourhood', 'suburb', 'quarter', 'school', 'university', 'college', 'kindergarten', 'hospital'),
+        paint: { 'fill-color': ['match', ['get', 'class'], ['commercial', 'retail'], '#fde9f0', 'industrial', '#eeeaf8', ['school', 'university', 'college', 'kindergarten'], '#fff1b3', 'hospital', '#ffdfe6', C.urban] } },
       { id: 'sand', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('sand', 'beach'), paint: { 'fill-color': C.sand } },
-      { id: 'grass', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('grass', 'farmland', 'wetland'), paint: { 'fill-color': C.grass, 'fill-opacity': 0.75 } },
+      { id: 'grass', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('grass', 'farmland', 'wetland'), paint: { 'fill-color': ['match', ['get', 'class'], 'farmland', '#eaf2bd', 'wetland', '#a9e6cf', C.grass], 'fill-opacity': 0.85 } },
       { id: 'wood', type: 'fill', ...src, 'source-layer': 'landcover', filter: cls('wood', 'forest'), paint: { 'fill-color': C.wood, 'fill-opacity': 0.8 } },
-      { id: 'park', type: 'fill', ...src, 'source-layer': 'park', paint: { 'fill-color': C.grass, 'fill-opacity': 0.7 } },
-      { id: 'parkuse', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('park', 'grass', 'cemetery', 'pitch', 'playground', 'garden'), paint: { 'fill-color': C.grass, 'fill-opacity': 0.7 } },
+      { id: 'park', type: 'fill', ...src, 'source-layer': 'park', paint: { 'fill-color': '#8fd96a', 'fill-opacity': 0.85 } },
+      { id: 'parkuse', type: 'fill', ...src, 'source-layer': 'landuse', filter: cls('park', 'grass', 'cemetery', 'pitch', 'playground', 'garden'),
+        paint: { 'fill-color': ['match', ['get', 'class'], 'pitch', '#6fd48a', 'playground', '#ffd166', 'cemetery', '#bcd9b4', '#9bdc72'], 'fill-opacity': 0.9 } },
       { id: 'coast', type: 'line', ...src, 'source-layer': 'water', paint: { 'line-color': C.coast, 'line-width': z(8, 2, 16, 18), 'line-blur': z(8, 2, 16, 14), 'line-opacity': 0.9 } },
-      { id: 'water', type: 'fill', ...src, 'source-layer': 'water', paint: { 'fill-color': C.water } },
+      { id: 'water', type: 'fill', ...src, 'source-layer': 'water', paint: { 'fill-color': ['match', ['get', 'class'], 'ocean', '#0ea8d8', 'swimming_pool', '#4fe3f0', C.water] } },
       { id: 'water-edge', type: 'line', ...src, 'source-layer': 'water', paint: { 'line-color': C.coast, 'line-width': z(10, 1, 17, 7), 'line-blur': z(10, 1, 17, 6), 'line-offset': z(10, 0.5, 17, 3.5), 'line-opacity': 0.75 } },
       { id: 'river', type: 'line', ...src, 'source-layer': 'waterway', paint: { 'line-color': C.river, 'line-width': z(8, 0.5, 17, 6) } },
-      road('path', cls('path', 'track', 'pedestrian'), C.path, z(14, 0.6, 18, 3), 14),
+      { ...road('path', cls('path', 'track', 'pedestrian'), C.path, z(14, 0.8, 18, 3.2), 14), paint: { 'line-color': C.path, 'line-width': z(14, 0.5, 18, 2.4), 'line-dasharray': [1.2, 1.6], 'line-opacity': 0.85 } },
       { id: 'rail', type: 'line', ...src, 'source-layer': 'transportation', minzoom: 11, filter: cls('rail', 'transit'), paint: { 'line-color': C.rail, 'line-width': z(11, 0.8, 18, 3), 'line-dasharray': [3, 2] } },
       road('minor-case', minor, C.minorCase, z(12, 1, 18, 23), 12),
       road('major-case', major, C.majorCase, z(8, 1, 18, 30), 8),
@@ -1110,9 +1114,9 @@ const LAGON_STYLE = (() => {
       road('major', major, C.major, z(8, 0.6, 18, 26), 8),
       road('motor', motor, C.motor, z(5, 0.8, 18, 29)),
       { id: 'bld-shadow', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': C.bShadow, 'fill-translate': [1.5, 2] } },
-      { id: 'bld', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': C.bTop, 'fill-outline-color': C.bLine } },
+      { id: 'bld', type: 'fill', ...src, 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': bTop, 'fill-outline-color': C.bLine } },
       { id: 'road-label', type: 'symbol', ...src, 'source-layer': 'transportation_name', minzoom: 14, layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': z(14, 10, 18, 14), 'text-max-angle': 30 }, paint: { 'text-color': C.label, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 } },
-      { id: 'water-label', type: 'symbol', ...src, 'source-layer': 'water_name', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Italic'], 'text-size': 13 }, paint: { 'text-color': '#ffffff', 'text-halo-color': C.water, 'text-halo-width': 1 } },
+      { id: 'water-label', type: 'symbol', ...src, 'source-layer': 'water_name', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Italic'], 'text-size': 13 }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#0a8fbf', 'text-halo-width': 1.2 } },
       { id: 'place-label', type: 'symbol', ...src, 'source-layer': 'place', filter: cls('city', 'town', 'village', 'suburb', 'quarter', 'neighbourhood'), layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'class'], 'city', 17, 'town', 15, 13], 'text-transform': 'uppercase', 'text-letter-spacing': 0.06, 'text-max-width': 8 }, paint: { 'text-color': C.place, 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.6 } }
     ]
   };
