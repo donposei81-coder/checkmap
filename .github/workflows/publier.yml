@@ -88,7 +88,7 @@ jobs:
           CHERCHE: ${{ inputs.cherche }}
         run: |
           if [ -n "$CHERCHE" ]; then QUI=(--cherche "$CHERCHE"); else QUI=(--tout); fi
-          python outils/frequences/gtfs_frequences.py "${QUI[@]}" --sortie /tmp/freq --cache /tmp/gtfs --efface
+          python outils/frequences/gtfs_frequences.py "${QUI[@]}" --sortie /tmp/freq --cache /tmp/gtfs --efface --duree-max 290
           rm -rf site/freq && mv /tmp/freq site/freq
       - name: Données (sauvegarde pour les publications suivantes)
         if: env.CALC_LIEUX == 'true' || env.CALC_HORAIRES == 'true'

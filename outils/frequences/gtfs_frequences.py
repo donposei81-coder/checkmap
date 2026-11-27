@@ -397,6 +397,7 @@ def main():
     ap.add_argument('--cache', default='cache-gtfs', help='dossier des fichiers téléchargés')
     ap.add_argument('--efface', action='store_true', help='supprime chaque fichier téléchargé après calcul (peu de place disque)')
     ap.add_argument('--verifie', metavar='LAT,LON', help='affiche les lignes autour d\'un point (après génération)')
+    ap.add_argument('--duree-max', type=float, metavar='MIN', help='arrête de traiter de nouveaux réseaux après ce nombre de minutes et écrit ce qui est calculé')
     a = ap.parse_args()
 
     if a.verifie and not (a.tout or a.jeu or a.cherche or a.gtfs):
@@ -416,6 +417,9 @@ def main():
 
     tiles, sources, t0 = {}, [], time.time()
     for i, f in enumerate(feeds, 1):
+        if a.duree_max and time.time() - t0 > a.duree_max * 60:
+            log(f'Durée maximale atteinte : {len(feeds) - i + 1} réseaux non traités sur {len(feeds)}')
+            break
         label = f"{f.get('titre')} / {f.get('ressource') or ''}".strip(' /')
         try:
             path = f.get('path') or download(f, a.cache)
