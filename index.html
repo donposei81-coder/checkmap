@@ -705,16 +705,17 @@ function dist(a, b){
   const x = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(x));
 }
-async function fetchJSON(url, opts = {}, ms = 12000){
+async function fetchText(url, opts = {}, ms = 12000){
   const ctl = new AbortController();
   const tm = setTimeout(() => ctl.abort(), ms);
   if (opts.signal) { if (opts.signal.aborted) ctl.abort(); else opts.signal.addEventListener('abort', () => ctl.abort()); }
   try {
     const r = await fetch(url, { ...opts, signal: ctl.signal });
     if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
-    return await r.json();
+    return await r.text();
   } finally { clearTimeout(tm); }
 }
+async function fetchJSON(url, opts = {}, ms = 12000){ return JSON.parse(await fetchText(url, opts, ms)); }
 // Appli native (Capacitor) : plugins chargés seulement s'ils existent
 const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const nativePlugins = {};
@@ -735,53 +736,81 @@ const isMobile = () => matchMedia('(max-width:760px)').matches;
 /* ============================================================
    Overpass : une requête au rayon maximal, cache local, plusieurs serveurs
    ============================================================ */
+// Le serveur d'OpenStreetMap France répond le plus vite pour la France ; les autres servent de secours.
 const ENDPOINTS = [
+  'https://overpass.openstreetmap.fr/api/interpreter',
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
 let epStart = 0;
+// Réponse en CSV (huit fois plus légère que le JSON) : seules les étiquettes utiles sont demandées.
+const CSV_TAGS = ['name', 'brand', 'network', 'operator', 'shop', 'amenity', 'leisure', 'healthcare', 'railway', 'station', 'highway', 'access'];
+function bbox(c, R){
+  const dLat = R / 111320, dLon = R / (111320 * Math.cos(c[0] * Math.PI / 180));
+  return `(${(c[0] - dLat).toFixed(5)},${(c[1] - dLon).toFixed(5)},${(c[0] + dLat).toFixed(5)},${(c[1] + dLon).toFixed(5)})`;
+}
+// Un carré plutôt qu'un cercle : le serveur répond deux à trois fois plus vite ; la distance est filtrée ici.
 function buildQuery(c, R){
-  const a = `(around:${Math.round(R)},${c[0].toFixed(6)},${c[1].toFixed(6)})`;
-  return `[out:json][timeout:25];(
+  const a = bbox(c, R);
+  return `[out:csv(::type,::lat,::lon,${CSV_TAGS.join(',')};false)][timeout:25];(
 nwr["shop"~"^(bakery|pastry|supermarket|convenience|greengrocer|butcher|cheese|seafood|farm)$"]${a};
 nwr["amenity"~"^(restaurant|cafe|fast_food|marketplace|doctors|clinic|hospital|pharmacy|dentist|school|kindergarten|childcare|post_office|bank|charging_station|bicycle_rental|toilets)$"]${a};
 nwr["healthcare"~"^(doctor|dentist|physiotherapist)$"]${a};
 nwr["leisure"~"^(park|playground|garden|fitness_centre|sports_centre|swimming_pool)$"]${a};
 node["highway"="bus_stop"]${a};
 nwr["railway"~"^(station|halt|tram_stop)$"]${a};
-);out center qt;`;
+);out center qt;make fin;out;`;
 }
-// Si un serveur tarde plus de 8 s, on lance aussi le suivant ; la première réponse l'emporte.
-function overpass(q){
+// Lignes CSV ; la ligne « fin » n'arrive que si le serveur a tout envoyé (pas de coupure en cours de route).
+function csvRows(txt){
+  const rows = txt.split('\n');
+  while (rows.length && !rows[rows.length - 1].trim()) rows.pop();
+  if (!rows.length || rows.pop().split('\t')[0] !== 'fin') {
+    if (/<html|error|timeout|memory/i.test(txt.slice(0, 2000))) throw new Error('Réponse Overpass invalide');
+    throw new Error('Réponse Overpass incomplète');
+  }
+  return rows.map(l => l.split('\t'));
+}
+function csvPlaces(txt){
+  return csvRows(txt).map(v => {
+    const tags = {};
+    CSV_TAGS.forEach((k, i) => { if (v[i + 3]) tags[k] = v[i + 3]; });
+    return { lat: v[1] ? +v[1] : null, lon: v[2] ? +v[2] : null, tags };
+  });
+}
+// Si un serveur tarde plus de 6 s, on lance aussi le suivant ; la première réponse complète l'emporte.
+// Au bout de 50 s sans réponse, on abandonne : l'appli affiche alors un message et un bouton « Réessayer ».
+const OVP_HEDGE = 6000, OVP_TIMEOUT = 40000, OVP_DEADLINE = 50000;
+function overpass(q, parse, onSlow){
   const order = ENDPOINTS.map((_, i) => (epStart + i) % ENDPOINTS.length);
   return new Promise((resolve, reject) => {
-    let done = false, launched = 0, failed = 0, lastErr = null, hedgeT = null;
+    let done = false, launched = 0, failed = 0, lastErr = null, hedgeT = null, deadT = null;
     const ctrls = [];
-    const finish = () => { done = true; clearTimeout(hedgeT); ctrls.forEach(c => c.abort()); };
+    const finish = () => { done = true; clearTimeout(hedgeT); clearTimeout(deadT); ctrls.forEach(c => c.abort()); };
     const launch = () => {
       if (done || launched >= order.length) return;
       const k = order[launched++], ctl = new AbortController();
       ctrls.push(ctl);
-      if (launched > 1) setStatus(`Serveur OpenStreetMap lent, essai d'un autre serveur (${launched}/${order.length})…`);
-      fetchJSON(ENDPOINTS[k], {
+      if (launched > 1 && onSlow) onSlow(launched, order.length);
+      fetchText(ENDPOINTS[k], {
         method: 'POST', signal: ctl.signal,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
         body: 'data=' + encodeURIComponent(q)
-      }, 40000).then(j => {
-        if (!Array.isArray(j.elements)) throw new Error('Réponse Overpass invalide');
-        if (!j.elements.length && j.remark && /error|timeout|memory/i.test(j.remark)) throw new Error(j.remark);
+      }, OVP_TIMEOUT).then(txt => {
         if (done) return;
-        epStart = k; finish(); resolve(j);
+        const res = parse(txt);
+        epStart = k; finish(); resolve(res);
       }).catch(e => {
         if (done) return;
         failed++; lastErr = e;
         if (failed >= order.length) { finish(); reject(lastErr); }
-        else if (launched - failed < 1) launch();
+        else if (launched - failed < 1) { clearTimeout(hedgeT); hedge(); }
       });
     };
-    const hedge = () => { launch(); if (!done && launched < order.length) hedgeT = setTimeout(hedge, 8000); };
+    const hedge = () => { launch(); if (!done && launched < order.length) hedgeT = setTimeout(hedge, OVP_HEDGE); };
+    deadT = setTimeout(() => { if (!done) { finish(); const e = new Error('Délai dépassé'); e.timeout = true; reject(e); } }, OVP_DEADLINE);
     hedge();
   });
 }
@@ -855,13 +884,12 @@ function cachePut(c, R, places){
   while (!store.set(CACHE_V + ':d:' + e.k, places) && idx.length > 1) store.del(CACHE_V + ':d:' + idx.pop().k);
   store.set(CACHE_V + ':idx', idx);
 }
-async function getPlaces(c, r){
+async function getPlaces(c, r, onSlow){
   const hit = cacheFind(c, r, false);
   if (hit) return { places: hit.places, cached: true };
   const R = Math.max(r, MIN_FETCH) + MARGIN;
   try {
-    const j = await overpass(buildQuery(c, R));
-    const places = parseElements(j.elements);
+    const places = parseElements(await overpass(buildQuery(c, R), csvPlaces, onSlow));
     cachePut(c, R, places);
     return { places, cached: false };
   } catch (e) {
@@ -1259,6 +1287,8 @@ function showError(msg){ $('#errMsg').textContent = msg; $('#err').hidden = fals
 function hideError(){ $('#err').hidden = true; }
 $('#retry').addEventListener('click', () => { hideError(); analyze(); });
 addEventListener('online', () => { if ($('#err').hidden === false) { hideError(); analyze(); } });
+// Retour sur l'appli après un échec (écran verrouillé, réseau mobile coupé) : nouvel essai automatique.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.failed && $('#err').hidden === false && navigator.onLine !== false) { hideError(); analyze(); } });
 
 async function analyze(){
   if (!S.center) return;
@@ -1266,11 +1296,14 @@ async function analyze(){
   setStatus('Chargement des lieux autour du point…');
   S.failed = false;
   if (S.placesFor !== placeKey(S.center)) render();
+  const slow = (n, total) => { if (tok === S.tok) setStatus(`Serveur OpenStreetMap lent, essai d'un autre serveur (${n}/${total})…`); };
+  let release;
+  S.placesP = new Promise(ok => { release = ok; });
   try {
-    const res = await getPlaces(S.center, S.r);
+    const res = await getPlaces(S.center, S.r, slow);
     if (tok !== S.tok) return;
     S.places = res.places; S.failed = false; S.placesFor = placeKey(S.center);
-    if (S.cmpA) S.cmpA.places = (await getPlaces(S.cmpA.c, S.r)).places;
+    if (S.cmpA) S.cmpA.places = (await getPlaces(S.cmpA.c, S.r, slow)).places;
     if (tok !== S.tok) return;
     hideError();
     if (res.stale) toast('Serveurs indisponibles : affichage des données en cache.');
@@ -1279,9 +1312,10 @@ async function analyze(){
     if (tok !== S.tok) return;
     showError(navigator.onLine === false
       ? 'Vous semblez hors ligne. Reconnectez-vous pour charger les lieux de ce quartier.'
-      : 'Les serveurs OpenStreetMap (Overpass) ne répondent pas pour le moment. Ils sont parfois saturés : réessayez dans quelques secondes.');
+      : 'Les serveurs OpenStreetMap ne répondent pas pour le moment. Ils sont parfois saturés : réessayez dans quelques secondes.');
     S.places = []; S.failed = true; render();
   } finally {
+    release();
     if (tok === S.tok) setStatus(null);
   }
 }
@@ -1781,12 +1815,14 @@ async function loadPrices(c){
 }
 const LINE_MODES = { subway: 'Métro', tram: 'Tram', light_rail: 'Train', train: 'Train', bus: 'Bus', trolleybus: 'Bus' };
 async function loadLines(c){
+  // attend la fin du chargement des lieux : les serveurs limitent les requêtes simultanées
+  if (S.placesP) await S.placesP;
   const a = `(around:400,${c[0].toFixed(6)},${c[1].toFixed(6)})`;
-  const j = await overpass(`[out:json][timeout:25];(node${a}[highway=bus_stop];node${a}[public_transport~"^(platform|stop_position)$"];node${a}[railway~"^(tram_stop|station|halt|stop|subway_entrance)$"];)->.s;rel(bn.s)[type=route][route~"^(bus|trolleybus|tram|subway|train|light_rail)$"];out tags;`);
+  const rows = await overpass(`[out:csv(::type,route,ref,name;false)][timeout:25];(node${a}[highway=bus_stop];node${a}[public_transport~"^(platform|stop_position)$"];node${a}[railway~"^(tram_stop|station|halt|stop|subway_entrance)$"];)->.s;rel(bn.s)[type=route][route~"^(bus|trolleybus|tram|subway|train|light_rail)$"];out tags;make fin;out;`, csvRows);
   const m = {};
-  for (const e of j.elements) {
-    const mode = LINE_MODES[e.tags.route]; if (!mode) continue;
-    (m[mode] = m[mode] || new Set()).add((e.tags.ref || e.tags.name || '?').slice(0, 14));
+  for (const [, route, ref, name] of rows) {
+    const mode = LINE_MODES[route]; if (!mode) continue;
+    (m[mode] = m[mode] || new Set()).add((ref || name || '?').slice(0, 14));
   }
   const order = ['Métro', 'Train', 'Tram', 'Bus'];
   return order.filter(k => m[k]).map(k => ({ mode: k, refs: [...m[k]].sort((x, y) => x.localeCompare(y, 'fr', { numeric: true })) }));

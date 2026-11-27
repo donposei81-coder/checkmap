@@ -33,7 +33,8 @@ Options : `--sortie` (dossier, `freq` par défaut), `--cache` (fichiers téléch
 ## Publication automatique (GitHub Pages)
 Le fichier `.github/workflows/publier.yml` calcule les fréquences de toute la France et publie l'appli web avec le dossier `freq/` sur GitHub Pages, chaque lundi.
 - Une fois : Settings > Pages > Source : « GitHub Actions ».
-- À la demande : onglet Actions > « Publier CheckMap » > Run workflow. Le champ « Réseaux » permet de ne calculer que quelques villes (ex. `Lyon, Rennes`) pour un essai rapide ; vide, toute la France.
+- À chaque modification de l'appli sur `main` : publication rapide (une minute environ), avec les horaires du dernier calcul (sauvegardés 90 jours).
+- À la demande : onglet Actions > « Publier CheckMap » > Run workflow. Le champ « Réseaux » permet de ne calculer que quelques villes (ex. `Lyon, Rennes`) pour un essai rapide ; vide, toute la France. Décocher « Recalculer les horaires » republie l'appli sans refaire le calcul.
 
 ## Licences
 Les horaires sont publiés par les réseaux de transport, le plus souvent sous licence ODbL ou Licence Ouverte : la liste est dans `index.json`, et l'appli cite transport.data.gouv.fr sous les lignes affichées.

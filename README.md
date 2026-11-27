@@ -8,7 +8,7 @@ En ligne : https://donposei81-coder.github.io/checkmap/
 - `index.html` : toute l'application (HTML, CSS, JavaScript).
 - `manifest.webmanifest`, `sw.js`, `icon.svg`, `icon-192.png`, `icon-512.png` : installation en PWA et mode hors ligne (seulement quand le site est servi en http/https).
 - `outils/frequences/` : calcul de la fréquence des lignes de transport (horaires GTFS).
-- `.github/workflows/publier.yml` : publication chaque lundi sur GitHub Pages (appli web + fréquences).
+- `.github/workflows/publier.yml` : publication sur GitHub Pages à chaque modification de l'appli, et nouveau calcul des fréquences chaque lundi.
 - `app-mobile/` : appli iPhone (Capacitor), widget « Mon quartier » et raccourcis Siri.
 
 ## Tester
@@ -32,7 +32,7 @@ En ligne : https://donposei81-coder.github.io/checkmap/
 - Plans classiques : OpenStreetMap (uniquement en http/https, car les serveurs OSM refusent les pages ouvertes en fichier local), Esri, OSM France, Humanitaire.
 
 ## Services utilisés (gratuits, sans clé)
-- Lieux : API Overpass, 4 serveurs. Une seule requête par zone, puis filtrage dans l'appli ; si un serveur tarde plus de 8 s, le suivant est interrogé en parallèle. Résultats gardés 24 h.
+- Lieux : API Overpass, 5 serveurs (OpenStreetMap France en premier). Une seule requête par zone, au format CSV (huit fois plus léger que le JSON), puis filtrage dans l'appli ; si un serveur tarde plus de 6 s, le suivant est interrogé en parallèle, et au bout de 50 s l'appli affiche un message avec un bouton « Réessayer ». Résultats gardés 24 h.
 - Adresses : Photon (autocomplétion), Nominatim en secours.
 - Temps de trajet : OSRM (serveurs FOSSGIS). Zones de marche : Valhalla (FOSSGIS).
 - Fréquence des transports : horaires GTFS de transport.data.gouv.fr, pré-calculés en fichiers statiques (`outils/frequences`).

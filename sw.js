@@ -1,5 +1,5 @@
 /* CheckMap — service worker : appli hors ligne et cache des tuiles */
-const SHELL = 'checkmap-shell-v4', TILES = 'checkmap-tiles-v2', MAX_TILES = 800;
+const SHELL = 'checkmap-shell-v5', TILES = 'checkmap-tiles-v2', MAX_TILES = 800;
 const PRECACHE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
@@ -29,10 +29,11 @@ self.addEventListener('fetch', e => {
     }));
     return;
   }
-  // Page : réseau d'abord, cache si hors ligne
+  // Page : réseau d'abord, toujours revalidée pour recevoir les mises à jour ; cache si hors ligne
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(r => { caches.open(SHELL).then(c => c.put('./index.html', r.clone())); return r; })
-      .catch(() => caches.match('./index.html')));
+    const key = /\/(index\.html)?$/.test(url.pathname) ? './index.html' : req.url;
+    e.respondWith(fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(r => { if (r.ok) { const copy = r.clone(); caches.open(SHELL).then(c => c.put(key, copy)); } return r; })
+      .catch(() => caches.match(key)));
     return;
   }
   // Bibliothèques, polices, icônes : cache d'abord

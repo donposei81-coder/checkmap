@@ -1,12 +1,21 @@
 # Publie l'appli web et les fréquences des transports sur GitHub Pages.
-# Chaque lundi à 4 h (heure de Paris), et à la demande : onglet Actions > Publier CheckMap > Run workflow.
+# - À chaque modification de l'appli sur main : publication rapide, avec les derniers horaires déjà calculés.
+# - Chaque lundi à 4 h (heure de Paris), et à la demande (onglet Actions > Publier CheckMap > Run workflow) :
+#   nouveau calcul des horaires, puis publication.
 name: Publier CheckMap
 
 on:
+  push:
+    branches: [main]
+    paths: ['*.html', '*.webmanifest', 'sw.js', 'icon*', '.github/workflows/publier.yml']
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
     inputs:
+      horaires:
+        description: 'Recalculer les horaires des transports (décoché : reprise des derniers calculés)'
+        type: boolean
+        default: true
       cherche:
         description: 'Réseaux à calculer, mots séparés par des virgules (vide : toute la France)'
         required: false
@@ -16,6 +25,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages
@@ -25,19 +35,54 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 340
+    env:
+      CALCUL: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.horaires) }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+        if: env.CALCUL == 'true'
         with:
           python-version: '3.12'
-      - name: Fréquences des transports
+      - name: Fréquences des transports (calcul)
+        if: env.CALCUL == 'true'
         env:
           CHERCHE: ${{ inputs.cherche }}
         run: |
           if [ -n "$CHERCHE" ]; then QUI=(--cherche "$CHERCHE"); else QUI=(--tout); fi
           python outils/frequences/gtfs_frequences.py "${QUI[@]}" --sortie site/freq --cache /tmp/gtfs --efface
+      - name: Fréquences des transports (sauvegarde pour les publications suivantes)
+        if: env.CALCUL == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frequences
+          path: site/freq
+          retention-days: 90
+          include-hidden-files: true
+      - name: Fréquences des transports (reprise des derniers horaires)
+        if: env.CALCUL != 'true'
+        run: |
+          mkdir -p site/freq
+          dernier() { gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$1&per_page=20" --jq '[.artifacts[] | select(.expired | not)][0].id // empty'; }
+          ID=$(dernier frequences)
+          if [ -n "$ID" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ID/zip" > /tmp/freq.zip
+            unzip -q /tmp/freq.zip -d site/freq
+            echo "Horaires repris de la sauvegarde $ID"
+          else
+            # Pas encore de sauvegarde : on reprend le dossier freq/ de la dernière publication, s'il existe encore.
+            ID=$(dernier github-pages)
+            if [ -n "$ID" ]; then
+              mkdir -p /tmp/ancien
+              gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ID/zip" > /tmp/ancien.zip
+              unzip -q /tmp/ancien.zip -d /tmp/ancien
+              tar -xf /tmp/ancien/artifact.tar -C /tmp/ancien
+              if [ -d /tmp/ancien/freq ]; then cp -r /tmp/ancien/freq/. site/freq/; echo "Horaires repris de la publication $ID"; fi
+            fi
+          fi
+          [ -f site/freq/index.json ] || { rm -rf site/freq; echo "Aucun horaire disponible : l'appli affichera les lignes sans fréquence."; }
       - name: Appli web
-        run: cp index.html manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png site/
+        run: cp *.html manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
