@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#14afd0">
+<title>Confidentialité – CheckMap</title>
+<meta name="description" content="Politique de confidentialité de l'application CheckMap.">
+<style>
+:root{--ink:#1b2a3a;--mute:#5a6b7d;--bg:#f7f9fb;--card:#fff;--line:#dbe3ea;--cyan:#12b3c4;--mag:#ff3d8b;--sun:#ffb020;--leaf:#2bb673}
+@media (prefers-color-scheme:dark){:root{--ink:#e9f1f5;--mute:#a3b4c2;--bg:#0f1c26;--card:#152633;--line:#25404f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header{background:linear-gradient(120deg,#12b3c4 0%,#14afd0 40%,#ff3d8b 100%);color:#fff;padding:40px 20px 56px}
+header .in,main{max-width:760px;margin:0 auto}
+header a{color:#fff;text-decoration:none;font-weight:700;opacity:.9}
+header h1{margin:18px 0 6px;font-size:32px;line-height:1.2}
+header p{margin:0;opacity:.95}
+main{padding:0 16px 48px;margin-top:-32px}
+section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin:0 0 16px;box-shadow:0 6px 20px rgba(18,40,60,.06)}
+section h2{margin:0 0 8px;font-size:20px;display:flex;align-items:center;gap:10px}
+section h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--dot,var(--cyan));flex:none}
+section:nth-of-type(4n+2){--dot:var(--mag)}section:nth-of-type(4n+3){--dot:var(--sun)}section:nth-of-type(4n+4){--dot:var(--leaf)}
+a{color:var(--cyan)}
+ul{padding-left:20px;margin:8px 0}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600}
+.todo{background:#fff3c4;color:#6b4c00;padding:0 4px;border-radius:4px}
+details{border-top:1px solid var(--line);padding:10px 0}details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600}
+.btn{display:inline-block;background:var(--mag);color:#fff;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:999px}
+footer{text-align:center;color:var(--mute);font-size:14px;padding:8px 16px 32px}
+</style>
+</head>
+<body>
+<header><div class="in">
+<a href="./">← CheckMap</a>
+<h1>Politique de confidentialité</h1>
+<p>Dernière mise à jour : 27 novembre 2026</p>
+</div></header>
+<main>
+<section>
+<h2>En résumé</h2>
+<ul>
+<li>CheckMap fonctionne <strong>sans compte</strong> et sans inscription.</li>
+<li>Vos favoris, votre historique, vos notes et vos photos de visite <strong>restent sur votre appareil</strong>. Nous ne les recevons pas.</li>
+<li>Pas de publicité, pas de traceur, pas de mesure d'audience, pas de revente de données.</li>
+<li>Pour trouver les lieux autour d'une adresse, l'appli envoie les coordonnées du point analysé à des services cartographiques publics (liste plus bas).</li>
+</ul>
+</section>
+<section>
+<h2>Qui est responsable</h2>
+<p>L'application CheckMap est éditée par Amine RIFI. Pour toute question sur vos données : <a href="mailto:donposei81@gmail.com">donposei81@gmail.com</a>.</p>
+</section>
+<section>
+<h2>Votre position</h2>
+<p>CheckMap demande l'accès à votre position uniquement quand vous touchez le bouton de géolocalisation, et seulement pendant que l'appli est ouverte. La position sert à centrer la carte et à analyser le quartier autour de vous. Vous pouvez refuser : la recherche d'adresse et le clic sur la carte fonctionnent sans.</p>
+<p>Nous n'enregistrons pas votre position sur un serveur et ne la suivons pas en arrière-plan.</p>
+</section>
+<section>
+<h2>Ce qui reste sur votre appareil</h2>
+<ul>
+<li>Favoris, historique des adresses analysées, « Mes lieux importants » (travail, école, famille…).</li>
+<li>Notes et photos de visite. L'appareil photo et la photothèque ne sont utilisés que si vous ajoutez une photo.</li>
+<li>Vos réglages (catégories cochées, rayon, style de carte) et une copie temporaire des résultats (24 h) pour aller plus vite.</li>
+<li>Sur iPhone, le widget « Mon quartier » lit le dernier score calculé, stocké dans l'appareil.</li>
+</ul>
+<p>Supprimer l'appli efface toutes ces données. Vous pouvez aussi supprimer un favori ou une photo dans l'appli. L'historique garde les 40 dernières adresses analysées.</p>
+</section>
+<section>
+<h2>Ce qui est envoyé à des services tiers</h2>
+<p>Pour afficher la carte et calculer le score, l'appli interroge directement des services publics et gratuits. Ils reçoivent la requête (coordonnées du point analysé ou texte de l'adresse recherchée) et, comme tout site web, l'adresse IP de votre appareil. Aucun identifiant personnel ne leur est transmis par CheckMap.</p>
+<table>
+<tr><th>Service</th><th>Utilisation</th><th>Données envoyées</th></tr>
+<tr><td>API Overpass (overpass-api.de, overpass.kumi.systems, overpass.private.coffee, maps.mail.ru)</td><td>Commerces et services autour du point</td><td>Coordonnées et rayon</td></tr>
+<tr><td>Photon (Komoot) et Nominatim (Fondation OpenStreetMap)</td><td>Recherche d'adresse</td><td>Texte saisi, coordonnées</td></tr>
+<tr><td>OSRM et Valhalla (FOSSGIS)</td><td>Temps de marche, vélo, voiture</td><td>Coordonnées de départ et d'arrivée</td></tr>
+<tr><td>Géorisques (État français)</td><td>Risques naturels et technologiques</td><td>Coordonnées</td></tr>
+<tr><td>DVF via l'API du Cerema</td><td>Prix des ventes immobilières</td><td>Coordonnées</td></tr>
+<tr><td>OpenFreeMap, OpenStreetMap, Esri</td><td>Fonds de carte</td><td>Zone affichée</td></tr>
+<tr><td>Google Fonts, unpkg</td><td>Police d'écriture et bibliothèques de carte (version web)</td><td>Requête technique</td></tr>
+<tr><td>GitHub Pages</td><td>Hébergement du site et des fréquences de transport</td><td>Requête technique</td></tr>
+</table>
+<p>Ces services ont leur propre politique de confidentialité. Nous n'avons pas de contrat de partage de données avec eux et ne recevons rien en retour.</p>
+</section>
+<section>
+<h2>Partage</h2>
+<p>Quand vous partagez un bilan (image, PDF ou lien), c'est vous qui choisissez le destinataire via la feuille de partage de votre téléphone. Un lien partagé contient l'adresse analysée.</p>
+</section>
+<section>
+<h2>Enfants</h2>
+<p>CheckMap ne collecte aucune donnée personnelle et ne s'adresse pas spécifiquement aux enfants.</p>
+</section>
+<section>
+<h2>Vos droits</h2>
+<p>Comme nous ne conservons aucune donnée vous concernant, il n'y a rien à consulter ou supprimer de notre côté. Pour toute question, écrivez à <a href="mailto:donposei81@gmail.com">donposei81@gmail.com</a>. Vous pouvez aussi saisir la CNIL (cnil.fr).</p>
+</section>
+<section>
+<h2>Modifications</h2>
+<p>Si cette politique change, la nouvelle version sera publiée sur cette page avec sa date.</p>
+</section>
+</main>
+<footer><a href="assistance.html">Assistance</a> · <a href="./">Ouvrir CheckMap</a></footer>
+</body>
+</html>
