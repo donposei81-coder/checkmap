@@ -1123,8 +1123,8 @@ function glStyle(C){
   const road = (id, filter, color, w, minzoom = 5, extra = {}) => ({ id, type: 'line', ...src, 'source-layer': 'transportation', minzoom, filter, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': w, ...extra } });
   const major = cls('primary', 'secondary', 'tertiary'), motor = cls('motorway', 'trunk'), minor = cls('minor', 'service');
   const glow = C.glow ? [
-    road('major-glow', major, C.major, z(8, 3, 18, 44), 8, { 'line-blur': z(8, 3, 18, 26), 'line-opacity': 0.45 }),
-    road('motor-glow', motor, C.motor, z(5, 3, 18, 50), 5, { 'line-blur': z(5, 3, 18, 30), 'line-opacity': 0.45 })
+    road('major-glow', major, C.major, z(8, 3, 18, 44), 8, { 'line-blur': z(8, 3, 18, 26), 'line-opacity': 0.32 }),
+    road('motor-glow', motor, C.motor, z(5, 3, 18, 50), 5, { 'line-blur': z(5, 3, 18, 30), 'line-opacity': 0.32 })
   ] : [];
   return {
     version: 8,
@@ -1312,6 +1312,10 @@ function setLabel(l){ S.label = l; $('#placeLabel').textContent = l; }
    ============================================================ */
 const GEO = 'https://data.geopf.fr/geocodage/';
 const first = v => Array.isArray(v) ? v[0] : v;
+// « Place Bellecour 69002 Lyon,Lyon 2e Arrondissement » → « Place Bellecour 69002 Lyon »
+const cleanLabel = l => String(l || '').replace(/\s*,\s*[^,]*\d+(e|er) Arrondissement$/i, '');
+const fold = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const words = t => fold(t).split(/[^a-z0-9]+/).filter(w => w.length > 1);
 // Résultat Géoplateforme → { c, main, sub, label, score }
 function geoItem(f){
   const p = f.properties, c = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
@@ -1322,21 +1326,33 @@ function geoItem(f){
     const where = [cp, city].filter(Boolean).join(' ');
     const town = (p.category || []).includes('commune');
     return { c, main, sub: town ? (p.extrafields && p.extrafields.status) || 'Commune' : [kind && kind[0].toUpperCase() + kind.slice(1), where].filter(Boolean).join(' · '),
-             label: town || !city || main.includes(city) ? main : `${main}, ${city}`, score: (p.score || 0) + (10 - (p.classification || 9)) * 0.012, town };
+             label: town || !city || main.includes(city) ? main : `${main}, ${city}`, score: (p.score || 0) + (10 - (p.classification || 9)) * 0.012, town,
+             city: (town ? main : city).replace(/\s+\d+(e|er) Arrondissement$/i, '') };
   }
   const town = first(p.type) === 'municipality', city = first(p.city);
   const main = town ? city : first(p.name);
   const sub = town ? first(p.context) : [first(p.postcode), city].filter(Boolean).join(' ');
-  return { c, main, sub, label: first(p.label), score: (p.score || 0) + ((p.importance || 0.4) - 0.4) * 0.15, town };
+  return { c, main, sub, label: cleanLabel(first(p.label)), score: (p.score || 0) + ((p.importance || 0.4) - 0.4) * 0.15, town, city };
 }
 const kmBetween = (a, b) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((b[0] - a[0]) * Math.PI / 360) ** 2 + Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin((b[1] - a[1]) * Math.PI / 360) ** 2));
 async function geoSearch(text, limit, signal){
-  const bias = S.center ? `&lat=${S.center[0].toFixed(5)}&lon=${S.center[1].toFixed(5)}` : '';
-  const j = await fetchJSON(`${GEO}search?q=${encodeURIComponent(text)}&limit=${Math.max(limit, 8)}&index=address,poi&autocomplete=1${bias}`, { signal }, 7000);
-  const items = (j.features || []).filter(f => f.geometry && f.geometry.coordinates).map(geoItem).filter(i => i.main);
-  // Petit bonus aux résultats proches du point en cours, puis on retire les doublons (même nom à moins de 300 m)
-  if (S.center) for (const i of items) i.score += 0.12 * Math.exp(-kmBetween(S.center, i.c) / 40);
+  // Deux requêtes : autour du point en cours, et dans toute la France (pour « hôpital Rennes » vu depuis Paris)
+  const url = `${GEO}search?q=${encodeURIComponent(text)}&limit=10&index=address,poi&autocomplete=1`;
+  const res = await Promise.allSettled([fetchJSON(url, { signal }, 7000),
+    S.center ? fetchJSON(`${url}&lat=${S.center[0].toFixed(5)}&lon=${S.center[1].toFixed(5)}`, { signal }, 7000) : Promise.reject(new Error('sans position'))]);
+  if (!res.some(r => r.status === 'fulfilled')) throw res[0].reason;
+  const items = res.flatMap(r => r.status === 'fulfilled' ? r.value.features || [] : [])
+    .filter(f => f.geometry && f.geometry.coordinates).map(geoItem).filter(i => i.main);
+  // Ville écrite dans la recherche : ses résultats passent devant ; sinon, petit bonus aux résultats proches
+  const typed = new Set(words(text));
+  const named = i => { const w = words(i.city); return w.length > 0 && w.every(x => typed.has(x)); };
+  const anyNamed = items.some(named);
+  for (const i of items) {
+    if (anyNamed) { if (named(i)) i.score += 0.2; }
+    else if (S.center) i.score += 0.12 * Math.exp(-kmBetween(S.center, i.c) / 40);
+  }
   items.sort((x, y) => y.score - x.score);
+  // Doublons : même nom à moins de 300 m (8 km pour une commune)
   const out = [];
   for (const i of items) if (!out.some(o => o.main.toLowerCase() === i.main.toLowerCase() && kmBetween(o.c, i.c) < (i.town || o.town ? 8 : 0.3))) out.push(i);
   return out.slice(0, limit);
@@ -1371,7 +1387,7 @@ async function reverse(c){
   try {
     const j = await fetchJSON(`${GEO}reverse?lat=${c[0].toFixed(6)}&lon=${c[1].toFixed(6)}&index=address&limit=1`, {}, 6000);
     const p = j.features && j.features[0] && j.features[0].properties;
-    if (p && first(p.label)) label = (p.distance > 400 ? 'Près de ' : '') + first(p.label);
+    if (p && first(p.label)) label = (p.distance > 400 ? 'Près de ' : '') + cleanLabel(first(p.label));
   } catch {
     try {   // secours ponctuel si la Géoplateforme ne répond pas
       const j = await fetchJSON(`https://photon.komoot.io/reverse?lat=${c[0]}&lon=${c[1]}&lang=fr`, {}, 6000);
@@ -2345,7 +2361,7 @@ async function drawBilan(){
   block('Risques, prix et transports', [...rk, ...pr, ...ln]);
   x.fillStyle = '#f0dfc4'; x.fillRect(0, H - 80, W, 80);
   x.fillStyle = '#5d6b78'; x.font = F(400, 22);
-  x.fillText(`Données : © OpenStreetMap (ODbL), Géorisques, DVF (Cerema)${f.freq ? ', transport.data.gouv.fr' : ''}. Temps de trajet estimés.`, 64, H - 32);
+  x.fillText(`Données : © OpenStreetMap (ODbL), IGN, Géorisques, DVF (Cerema)${f.freq ? ', transport.data.gouv.fr' : ''}. Temps de trajet estimés.`, 64, H - 32);
   return new Promise(r => cv.toBlob(r, 'image/png'));
 }
 let bilanBlob = null, pdfLib = null;
