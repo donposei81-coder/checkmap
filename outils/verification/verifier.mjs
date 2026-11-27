@@ -12,6 +12,22 @@ fs.mkdirSync(SORTIE, { recursive: true });
 
 const rapport = { site: SITE, debut: new Date().toISOString(), scenarios: [] };
 const pause = ms => new Promise(r => setTimeout(r, ms));
+// Captures en JPEG ; avec AFFICHER_CAPTURES=1 elles sont aussi écrites dans le journal (base64), lisibles sans télécharger l'artefact
+const captures = [];
+async function capture(page, nom){
+  const f = `${SORTIE}/${nom}.jpg`;
+  await page.screenshot({ path: f, type: 'jpeg', quality: 70 });
+  captures.push(f);
+}
+// Exemples de réponses brutes de la Géoplateforme, pour contrôler leur format
+rapport.exemples = {};
+for (const [nom, url] of [
+  ['adresse-lyon', 'https://data.geopf.fr/geocodage/reverse?lat=45.757800&lon=4.832000&index=address&limit=1'],
+  ['adresse-paris', 'https://data.geopf.fr/geocodage/reverse?lat=48.867450&lon=2.363620&index=address&limit=1'],
+  ['recherche-montmartre', 'https://data.geopf.fr/geocodage/search?q=montmartre&limit=3&index=address,poi&autocomplete=1&lat=48.86745&lon=2.36362']
+]) {
+  try { rapport.exemples[nom] = JSON.stringify(await (await fetch(url)).json()).slice(0, 2500); } catch (e) { rapport.exemples[nom] = String(e); }
+}
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 
 async function contexte(mobile){
@@ -75,7 +91,7 @@ for (const a of ADRESSES) {
   await page.waitForFunction(() => !/…/.test(document.getElementById('trips').innerText), null, { timeout: 30000 }).catch(() => {});
   await pause(6000);
   Object.assign(s, await etat(page));
-  await page.screenshot({ path: `${SORTIE}/${a.nom}-telephone.png` });
+  await capture(page, `${a.nom}-telephone`);
   await ctx.close();
 }
 
@@ -91,7 +107,7 @@ for (const a of ADRESSES) {
     await pause(7000);
     const e = await etat(page);
     s.fonds.push({ nom: noms[i], actif: e.fond === i, theme: e.theme, carteGL: e.carteGL, mentions: e.mentions });
-    await page.screenshot({ path: `${SORTIE}/fond-${i + 1}.png` });
+    await capture(page, `fond-${i + 1}`);
   }
   await ctx.close();
 }
@@ -108,7 +124,7 @@ for (const a of ADRESSES) {
     await pause(900);
     s.suggestions[q] = await page.$$eval('#sugg li', l => l.map(x => x.innerText.replace(/\s*\n\s*/g, ' / ')));
   }
-  await page.screenshot({ path: `${SORTIE}/recherche.png` });
+  await capture(page, 'recherche');
   for (const q of ['15 rue nationale lille', '10 rue de la paix paris', 'mairie de bordeaux']) {
     const avant = await page.evaluate(() => location.hash);
     await page.fill('#q', q); await page.press('#q', 'Enter');
@@ -132,11 +148,12 @@ for (const a of ADRESSES) {
   const d = await dl;
   s.pdf = d ? d.suggestedFilename() : null;
   if (d) { await d.saveAs(`${SORTIE}/bilan.pdf`); s.pdfOctets = fs.statSync(`${SORTIE}/bilan.pdf`).size; }
-  await page.screenshot({ path: `${SORTIE}/bilan.png` });
+  await capture(page, 'bilan');
   await ctx.close();
 }
 
 rapport.fin = new Date().toISOString();
 fs.writeFileSync(`${SORTIE}/rapport.json`, JSON.stringify(rapport, null, 2));
 await browser.close();
-console.log(JSON.stringify(rapport, null, 2).slice(0, 6000));
+console.log(JSON.stringify(rapport, null, 2));
+if (process.env.AFFICHER_CAPTURES) for (const f of captures) console.log(`CAPTURE ${f.split('/').pop()} ${fs.readFileSync(f).toString('base64')}`);

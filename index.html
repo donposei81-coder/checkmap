@@ -1324,10 +1324,10 @@ function geoItem(f){
     return { c, main, sub: town ? (p.extrafields && p.extrafields.status) || 'Commune' : [kind && kind[0].toUpperCase() + kind.slice(1), where].filter(Boolean).join(' · '),
              label: town || !city || main.includes(city) ? main : `${main}, ${city}`, score: (p.score || 0) + (10 - (p.classification || 9)) * 0.012, town };
   }
-  const town = p.type === 'municipality';
-  const main = town ? p.city : p.name;
-  const sub = town ? p.context : [p.postcode, p.city].filter(Boolean).join(' ');
-  return { c, main, sub, label: p.label, score: (p.score || 0) + ((p.importance || 0.4) - 0.4) * 0.15, town };
+  const town = first(p.type) === 'municipality', city = first(p.city);
+  const main = town ? city : first(p.name);
+  const sub = town ? first(p.context) : [first(p.postcode), city].filter(Boolean).join(' ');
+  return { c, main, sub, label: first(p.label), score: (p.score || 0) + ((p.importance || 0.4) - 0.4) * 0.15, town };
 }
 const kmBetween = (a, b) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((b[0] - a[0]) * Math.PI / 360) ** 2 + Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin((b[1] - a[1]) * Math.PI / 360) ** 2));
 async function geoSearch(text, limit, signal){
@@ -1371,7 +1371,7 @@ async function reverse(c){
   try {
     const j = await fetchJSON(`${GEO}reverse?lat=${c[0].toFixed(6)}&lon=${c[1].toFixed(6)}&index=address&limit=1`, {}, 6000);
     const p = j.features && j.features[0] && j.features[0].properties;
-    if (p) label = (p.distance > 400 ? 'Près de ' : '') + p.label;
+    if (p && first(p.label)) label = (p.distance > 400 ? 'Près de ' : '') + first(p.label);
   } catch {
     try {   // secours ponctuel si la Géoplateforme ne répond pas
       const j = await fetchJSON(`https://photon.komoot.io/reverse?lat=${c[0]}&lon=${c[1]}&lang=fr`, {}, 6000);
